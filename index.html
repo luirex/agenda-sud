@@ -315,7 +315,7 @@ function generarCodigo(nombre){
 let oracionFontSize = parseInt(localStorage.getItem('oracion-font-size')) || 16;
 function bloqueOracionSanta(tipo){
   const texto = (state.oracionesSacramentales && state.oracionesSacramentales[tipo]) || '';
-  const etiqueta = tipo==='pan' ? '🍞 Oración del pan' : '💧 Oración del agua';
+  const etiqueta = tipo==='pan' ? ' Oración del pan' : ' Oración del agua';
   return `<div id="oracion-card-${tipo}" class="oracion-card" style="display:none;">
     <button type="button" class="oracion-cerrar" onclick="cerrarOracion('${tipo}')" aria-label="Cerrar">✕</button>
     <div class="oracion-header">
