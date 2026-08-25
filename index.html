@@ -315,7 +315,7 @@ function generarCodigo(nombre){
 let oracionFontSize = parseInt(localStorage.getItem('oracion-font-size')) || 16;
 function bloqueOracionSanta(tipo){
   const texto = (state.oracionesSacramentales && state.oracionesSacramentales[tipo]) || '';
-  const etiqueta = tipo==='pan' ? ' Oración del pan' : ' Oración del agua';
+  const etiqueta = tipo==='pan' ? 'Oración del pan' : 'Oración del agua';
   return `<div id="oracion-card-${tipo}" class="oracion-card" style="display:none;">
     <button type="button" class="oracion-cerrar" onclick="cerrarOracion('${tipo}')" aria-label="Cerrar">✕</button>
     <div class="oracion-header">
@@ -1671,8 +1671,8 @@ function fieldsetsDominical(prefix, d, onSave){
     <label>Bendición y reparto</label>
     <textarea rows="1" class="auto-grow" oninput="autoGrow(this);fieldUpdate('${prefix}','santaCenaFrase',this.value)">${escapeHtml(d.santaCenaFrase)}</textarea>
     <div class="actions-row" style="margin-top:6px;">
-      <button type="button" class="btn-secondary" onclick="toggleOracion('pan')">🍞 Pan</button>
-      <button type="button" class="btn-secondary" onclick="toggleOracion('agua')">💧 Agua</button>
+      <button type="button" class="btn-secondary" onclick="toggleOracion('pan')">Oración del pan</button>
+      <button type="button" class="btn-secondary" onclick="toggleOracion('agua')">Oración del agua</button>
     </div>
     ${bloqueOracionSanta('pan')}
     ${bloqueOracionSanta('agua')}
@@ -1782,8 +1782,8 @@ function fieldsetsAyuno(prefix, a, onSave){
     <label>Bendición y reparto</label>
     <textarea rows="1" class="auto-grow" oninput="autoGrow(this);fieldUpdate('${prefix}','santaCenaFrase',this.value)">${escapeHtml(a.santaCenaFrase)}</textarea>
     <div class="actions-row" style="margin-top:6px;">
-      <button type="button" class="btn-secondary" onclick="toggleOracion('pan')">🍞 Pan</button>
-      <button type="button" class="btn-secondary" onclick="toggleOracion('agua')">💧 Agua</button>
+      <button type="button" class="btn-secondary" onclick="toggleOracion('pan')">Oración de pan</button>
+      <button type="button" class="btn-secondary" onclick="toggleOracion('agua')">Oración de agua</button>
     </div>
     ${bloqueOracionSanta('pan')}
     ${bloqueOracionSanta('agua')}
