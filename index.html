@@ -2042,23 +2042,36 @@ window.finalizarDominical = async function(){
   if(!d.fecha){ alert('Ingresa la fecha de la reunión antes de archivarla.'); return; }
   const dataSnapshot = JSON.parse(JSON.stringify(d));
   dataSnapshot.familiasNoAsistieron = [...state.familiasData.list];
+
+  // 1) Registrar discursantes primero, para no perderlos si algo falla
+  const conNombre = (d.discursantes||[]).filter(dc=> dc.nombre && dc.nombre.trim());
+  let guardados = 0;
+  for(const dc of conNombre){
+    try{
+      const ref = doc(colDiscursantes(), slugPersona(dc.nombre));
+      const snap = await getDoc(ref);
+      const historialPrevio = (snap.exists() && Array.isArray(snap.data().historial)) ? snap.data().historial : [];
+      const nuevoRegistro = {fecha:d.fecha, tiempo:dc.tiempo||'', tema:dc.tema||''};
+      const yaExiste = historialPrevio.some(h=> h.fecha===nuevoRegistro.fecha && h.tema===nuevoRegistro.tema);
+      const historial = yaExiste ? historialPrevio : [...historialPrevio, nuevoRegistro];
+      await setDoc(ref, {nombre: dc.nombre.trim(), historial}, {merge:true});
+      guardados++;
+    }catch(e){
+      console.error('Error al registrar discursante', dc.nombre, e);
+      alert(`No se pudo registrar a "${dc.nombre}" en la bitácora: ${e.message||e}\n\nLa reunión NO se archivó. Corrige el problema e inténtalo de nuevo.`);
+      return;
+    }
+  }
+
+  // 2) Archivar la reunión
   try{
     await addDoc(colReuniones(), {tipo:'Reunión Sacramental Dominical', fecha:d.fecha, archivedAt:new Date().toISOString(), data:dataSnapshot});
-    for(const dc of d.discursantes){
-      if(dc.nombre && dc.nombre.trim()){
-        const ref = doc(colDiscursantes(), slugPersona(dc.nombre));
-        await setDoc(ref, {
-          nombre: dc.nombre.trim(),
-          historial: arrayUnion({fecha:d.fecha, tiempo:dc.tiempo||'', tema:dc.tema||''})
-        }, {merge:true});
-      }
-    }
     state.dominical = defaultDominical();
     state.dominical.barrioRama = state.barrioNombre;
     state.pendingRemoteDominical = null;
     await setDoc(refDominical(), Object.assign({}, state.dominical, {_writer:sessionId}));
     render();
-    toast('Reunión archivada. Puedes editarla desde la Bitácora de Reuniones si es necesario.');
+    toast(`Reunión archivada. ${guardados} discursante(s) registrado(s) en la bitácora.`);
   }catch(e){
     alert('No se pudo archivar la reunión: '+(e.message||e));
   }
