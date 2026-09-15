@@ -207,6 +207,8 @@
       color:#8A6D2F;text-transform:uppercase;border-bottom:1px solid #C9A55C;padding-bottom:4px;margin:0 0 9px;}
     .print-row{font-size:12.5px;margin-bottom:4px;line-height:1.55;}
     .print-label{font-weight:700;color:#152238;}
+    .print-oracion{display:flex;align-items:flex-end;gap:6px;}
+    .print-linea{flex:1;border-bottom:1px solid #999;min-height:16px;padding-bottom:1px;}
     .print-footer{margin-top:26px;font-size:9.5px;color:#999;border-top:1px solid #E4DCC3;padding-top:8px;
       text-align:center;font-style:italic;letter-spacing:.3px;}
   }
@@ -1235,6 +1237,7 @@ function slugPersona(nombre){
 
 /* ============ CUADRO UNIFICADO DE ANUNCIOS/ASUNTOS (generales + del barrio) ============ */
 function makeAnunciosBox(containerId, getArr, onSave, getGenerales){
+  let editandoIdx = null;
   const mgr = {
     render(){
       const refArr = getArr() || [];
@@ -1259,10 +1262,23 @@ function makeAnunciosBox(containerId, getArr, onSave, getGenerales){
         </div>`).join('');
       const itemsHtml = arr.map((raw,idx)=>{
         const it = (typeof raw==='string') ? {texto:raw, fechaLimite:''} : raw;
+        if(idx===editandoIdx){
+          return `
+          <div class="anuncio-general-item">
+            <textarea id="${containerId}-edit-texto-${idx}" class="auto-grow" rows="1" oninput="autoGrow(this)">${escapeHtml(it.texto)}</textarea>
+            <label style="margin-top:8px;">Válido hasta (opcional)</label>
+            <input id="${containerId}-edit-fecha-${idx}" type="date" value="${escapeAttr(it.fechaLimite||'')}">
+            <div class="actions-row" style="margin-top:8px;">
+              <button type="button" class="btn-primary" style="padding:8px 16px;font-size:13px;" onclick="listManagers['${containerId}'].guardarEdicion(${idx})">Guardar</button>
+              <button type="button" class="btn-secondary" style="padding:8px 16px;font-size:13px;" onclick="listManagers['${containerId}'].cancelarEdicion()">Cancelar</button>
+            </div>
+          </div>`;
+        }
         return `
         <div class="anuncio-general-item" style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px;">
           <span style="flex:1;">${escapeHtml(it.texto)}${it.fechaLimite?`<div class="hint" style="margin:2px 0 0;">Válido hasta ${fmtFecha(it.fechaLimite)}</div>`:''}</span>
           <div style="display:flex;gap:6px;flex-shrink:0;">
+            <button type="button" class="btn-secondary" style="padding:3px 9px;font-size:12px;" onclick="listManagers['${containerId}'].editar(${idx})" aria-label="Editar">✎</button>
             <button type="button" class="btn-secondary" style="padding:3px 9px;font-size:12px;" onclick="listManagers['${containerId}'].mover(${idx},-1)" ${idx===0?'disabled':''} aria-label="Subir">▲</button>
             <button type="button" class="btn-secondary" style="padding:3px 9px;font-size:12px;" onclick="listManagers['${containerId}'].mover(${idx},1)" ${idx===arr.length-1?'disabled':''} aria-label="Bajar">▼</button>
             <button type="button" class="btn-remove" style="width:auto;padding:3px 9px;height:auto;" onclick="listManagers['${containerId}'].remove(${idx})" aria-label="Eliminar">&#10005;</button>
@@ -1271,9 +1287,21 @@ function makeAnunciosBox(containerId, getArr, onSave, getGenerales){
       }).join('');
       const vacio = (!generales.length && !arr.length) ? `<p class="hint" style="margin:4px 0 0;">Todavía no hay nada agregado aquí.</p>` : '';
       qs(containerId).innerHTML = generalesHtml + itemsHtml + vacio;
+      qs(containerId).querySelectorAll('textarea.auto-grow').forEach(autoGrow);
     },
     addWithValue(val){ getArr().push(val); mgr.render(); onSave(); },
-    remove(idx){ getArr().splice(idx,1); mgr.render(); onSave(); },
+    remove(idx){ if(editandoIdx===idx) editandoIdx=null; getArr().splice(idx,1); mgr.render(); onSave(); },
+    editar(idx){ editandoIdx = idx; mgr.render(); },
+    cancelarEdicion(){ editandoIdx = null; mgr.render(); },
+    guardarEdicion(idx){
+      const textoEl = qs(`${containerId}-edit-texto-${idx}`);
+      const fechaEl = qs(`${containerId}-edit-fecha-${idx}`);
+      const texto = textoEl.value.trim();
+      if(!texto){ alert('El texto no puede quedar vacío.'); return; }
+      getArr()[idx] = {texto, fechaLimite: fechaEl.value || ''};
+      editandoIdx = null;
+      mgr.render(); onSave();
+    },
     mover(idx, dir){
       const arr = getArr();
       const otro = idx+dir;
@@ -2067,6 +2095,12 @@ window.toggleGeneralDiscursantes = function(){
   state.generalDiscursantesAbierto = state.generalDiscursantesAbierto === false ? true : false;
   render();
 };
+window.buscarDiscursante = function(val){
+  state.busquedaDiscursante = val;
+  render();
+  const el = qs('discursante-search-input');
+  if(el){ el.focus(); const pos = val.length; el.setSelectionRange(pos, pos); }
+};
 function renderDiscursantes(){
   const entries = Object.values(state.registry).filter(e=>e.historial && e.historial.length);
   if(!entries.length){
@@ -2078,9 +2112,12 @@ function renderDiscursantes(){
   entries.forEach(e=> e.historial.sort((a,b)=>(b.fecha||'').localeCompare(a.fecha||'')) );
   const conEstado = entries.map(e=>({e, est: estadoSemaforo(e.historial[0].fecha)}));
 
-  const generalOrdenado = conEstado.slice().sort((a,b)=>a.e.nombre.localeCompare(b.e.nombre));
-  const generalRows = generalOrdenado.map(({e,est})=>{
-    const fechas = e.historial.map(h=>`<span class="fecha-pill" title="${escapeAttr(h.tema||'')}${h.tiempo?' · '+escapeAttr(h.tiempo):''}">${fmtFecha(h.fecha)}</span>`).join('');
+  const busqueda = (state.busquedaDiscursante||'').trim().toLowerCase();
+  const normalizar = s => (s||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');
+  const generalOrdenado = conEstado.slice().sort((a,b)=>a.e.nombre.localeCompare(b.e.nombre))
+    .filter(({e})=> !busqueda || normalizar(e.nombre).includes(normalizar(busqueda)));
+  const generalRows = generalOrdenado.length ? generalOrdenado.map(({e,est})=>{
+    const fechas = e.historial.map(h=>`<span class="fecha-pill" title="${escapeAttr(h.tema||'')}${h.tiempo?' · '+escapeAttr(h.tiempo):''}">${fmtFecha(h.fecha)}${h.tiempo?' · '+escapeHtml(h.tiempo):''}</span>`).join('');
     return `<div class="discursante-row">
       <div>
         <div class="nombre"><span class="semaforo ${est.color}"></span>${escapeHtml(e.nombre)}</div>
@@ -2088,7 +2125,7 @@ function renderDiscursantes(){
         <div class="fechas-wrap">${fechas}</div>
       </div>
     </div>`;
-  }).join('');
+  }).join('') : `<p class="hint" style="margin:6px 0 0;">Ningún nombre coincide con "${escapeHtml(state.busquedaDiscursante||'')}".</p>`;
 
   const grupos = {rojo:[], naranja:[], verde:[]};
   conEstado.forEach(item=>grupos[item.est.color].push(item));
@@ -2116,6 +2153,8 @@ function renderDiscursantes(){
   <p class="verse">Se actualiza en vivo entre todos los que usen este barrio.</p>
   <fieldset>
     <legend style="cursor:pointer;" onclick="toggleGeneralDiscursantes()">General — todas las fechas por persona (${entries.length}) ${generalAbierto?'▲':'▼'}</legend>
+    <input type="text" id="discursante-search-input" placeholder="Buscar por nombre..." value="${escapeAttr(state.busquedaDiscursante||'')}"
+      oninput="buscarDiscursante(this.value)" style="margin-bottom:${generalAbierto?'12px':'0'};">
     ${generalAbierto ? generalRows : ''}
   </fieldset>
   <fieldset>
@@ -2165,6 +2204,16 @@ function filaImprimible(label, val){
   if(!texto) return '';
   return `<div class="print-row"><span class="print-label">${escapeHtml(label)}:</span> ${escapeHtml(texto)}</div>`;
 }
+function filaListaImprimible(label, arr){
+  const items = (arr||[]).filter(v=>v);
+  if(!items.length) return '';
+  const puntos = items.map(v=>`<div class="print-row" style="margin-left:14px;">• ${escapeHtml(v)}</div>`).join('');
+  return `<div class="print-row"><span class="print-label">${escapeHtml(label)}:</span></div>${puntos}`;
+}
+function filaOracionImprimible(label, val){
+  const texto = val ? escapeHtml(val) : '';
+  return `<div class="print-row print-oracion"><span class="print-label">${escapeHtml(label)}:</span> <span class="print-linea">${texto}</span></div>`;
+}
 function seccionImprimible(titulo, filasHtml){
   const filas = filasHtml.filter(f=>f).join('');
   if(!filas) return '';
@@ -2187,13 +2236,14 @@ function construirHtmlImprimible(entry){
     filaImprimible('Preside', d.preside), filaImprimible('Dirige', d.dirige),
     filaImprimible('Pianista', d.pianista), filaImprimible('Dirección de música', d.direccionMusica),
     filaImprimible('Bienvenida', d.bienvenida),
-    filaImprimible('Primer himno', d.primerHimno), filaImprimible('Primera oración', d.primeraOracion)
+    filaImprimible('Primer himno', d.primerHimno),
+    filaOracionImprimible('Primera oración', d.primeraOracion)
   ]);
 
-  html += seccionImprimible('Anuncios', [filaImprimible('Anuncios', (d.anuncios||[]).map(a=> typeof a==='string'? a : a.texto))]);
+  html += seccionImprimible('Anuncios', [filaListaImprimible('Anuncios', (d.anuncios||[]).map(a=> typeof a==='string'? a : a.texto))]);
 
   html += seccionImprimible(esDominical?'Asuntos del barrio / rama':'Asuntos de barrio', [
-    filaImprimible('Asuntos', d.asuntosBarrio),
+    filaListaImprimible('Asuntos', (d.asuntosBarrio||[]).map(a=> typeof a==='string'? a : a.texto)),
     filaImprimible('Confirmación de nuevos miembros', esDominical? d.confirmacionNuevosMiembros : d.confirmacionMiembrosNuevos)
   ]);
 
@@ -2203,20 +2253,33 @@ function construirHtmlImprimible(entry){
   ]);
 
   if(esDominical){
-    const discursantesFilas = (d.discursantes||[]).filter(x=>x.nombre).map((x,i)=>
-      `<div class="print-row">${i+1}. <span class="print-label">${escapeHtml(x.nombre)}</span>${x.tiempo?' ('+escapeHtml(x.tiempo)+')':''}${x.tema?' — "'+escapeHtml(x.tema)+'"':''}</div>`);
-    html += seccionImprimible('Discursantes', discursantesFilas);
-    html += seccionImprimible('Himno especial', [filaImprimible('Himno especial', d.himnoEspecial)]);
+    const discursantesArr = d.discursantes||[];
+    const pos = Math.min(Math.max(d.himnoEspecialPos!=null? d.himnoEspecialPos : 2, 0), discursantesArr.length);
+    let filas = [];
+    let numero = 1;
+    discursantesArr.forEach((x,i)=>{
+      if(i===pos && d.himnoEspecial){
+        filas.push(`<div class="print-row" style="margin:8px 0;font-style:italic;">🎵 Himno especial: ${escapeHtml(d.himnoEspecial)}</div>`);
+      }
+      if(x.nombre){
+        filas.push(`<div class="print-row">${numero}. <span class="print-label">${escapeHtml(x.nombre)}</span>${x.tiempo?' ('+escapeHtml(x.tiempo)+')':''}${x.tema?' — "'+escapeHtml(x.tema)+'"':''}</div>`);
+        numero++;
+      }
+    });
+    if(pos>=discursantesArr.length && d.himnoEspecial){
+      filas.push(`<div class="print-row" style="margin:8px 0;font-style:italic;">🎵 Himno especial: ${escapeHtml(d.himnoEspecial)}</div>`);
+    }
+    html += seccionImprimible('Discursantes', filas);
   } else {
     const testFilas = (d.testimoniantes||[]).filter(t=>t).map((t,i)=>`<div class="print-row">${i+1}. ${escapeHtml(t)}</div>`);
     html += seccionImprimible('Testimonios', [...testFilas, filaImprimible('Notas', d.testimoniosNotas)]);
   }
 
-  html += seccionImprimible('Agradecimientos', [filaImprimible('Agradecimientos', d.agradecimientos)]);
+  html += seccionImprimible('Agradecimientos', [filaListaImprimible('Agradecimientos', (d.agradecimientos||[]).map(a=> typeof a==='string'? a : a.texto))]);
 
   html += seccionImprimible('Cierre', [
     filaImprimible('Himno final', d.himnoFinal),
-    filaImprimible(esDominical?'Última oración':'Oración final', esDominical? d.ultimaOracion : d.oracionFinal),
+    filaOracionImprimible(esDominical?'Última oración':'Oración final', esDominical? d.ultimaOracion : d.oracionFinal),
     filaImprimible('Asistencia', d.asistencia), filaImprimible('Finalizó', d.finalizo),
     filaImprimible('Familias que no asistieron', d.familiasNoAsistieron),
     filaImprimible('Observaciones', d.observaciones)
