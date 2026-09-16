@@ -1728,17 +1728,34 @@ function bloqueSugerenciaDomingo(){
   const fechaTexto = domingo.toLocaleDateString('es-ES', {weekday:'long', day:'numeric', month:'long'});
   const vista = esAyuno ? 'ayuno' : 'dominical';
   const nombreReunion = esAyuno ? 'Reunión de Ayuno y Testimonio' : 'Reunión Sacramental Dominical';
+  const fechaISO = `${domingo.getFullYear()}-${String(domingo.getMonth()+1).padStart(2,'0')}-${String(domingo.getDate()).padStart(2,'0')}`;
+  const archivada = (state.log||[]).find(e=> e.fecha===fechaISO && e.tipo===nombreReunion);
+  const boton = archivada
+    ? `<button type="button" class="btn-secondary" onclick="abrirReunionArchivada('${archivada.id}')">Ver la agenda de ese día</button>`
+    : `<button type="button" class="btn-secondary" onclick="goTo('${vista}')">Crear / continuar esa agenda</button>`;
+  const estado = archivada
+    ? `<div class="hint" style="margin:4px 0 0;">Ya existe una agenda archivada para ese día.</div>`
+    : `<div class="hint" style="margin:4px 0 0;">Todavía no hay una agenda archivada para ese día.</div>`;
   return `<div class="sugerencia-domingo">
-    <span style="display:flex;align-items:center;gap:10px;">
-      <svg viewBox="0 0 24 24" fill="none" style="width:20px;height:20px;flex-shrink:0;color:var(--navy);">
+    <span style="display:flex;align-items:flex-start;gap:10px;">
+      <svg viewBox="0 0 24 24" fill="none" style="width:20px;height:20px;flex-shrink:0;color:var(--navy);margin-top:2px;">
         <rect x="4" y="5" width="16" height="15" rx="2" stroke="currentColor" stroke-width="1.5"/>
         <path d="M4 9h16M8 3v3M16 3v3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
       </svg>
-      <span>${esHoy? 'Hoy' : 'El próximo domingo'} (${fechaTexto}) corresponde a: <b>${nombreReunion}</b></span>
+      <span>${esHoy? 'Hoy' : 'El próximo domingo'} (${fechaTexto}) corresponde a: <b>${nombreReunion}</b>${estado}</span>
     </span>
-    <button type="button" class="btn-secondary" onclick="goTo('${vista}')">Ir a esa agenda</button>
+    ${boton}
   </div>`;
 }
+window.abrirReunionArchivada = function(id){
+  state.filtroFechaReuniones = '';
+  state.filtroFechaDesde = '';
+  state.filtroFechaHasta = '';
+  state.openLogIds.add(id);
+  state.view = 'reuniones';
+  render();
+  window.scrollTo(0,0);
+};
 function renderHome(){
   const familias = state.familiasData.list;
   return `
