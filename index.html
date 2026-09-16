@@ -2083,16 +2083,24 @@ window.finalizarDominical = async function(){
   // 2) Archivar la reunión
   try{
     await addDoc(colReuniones(), {tipo:'Reunión Sacramental Dominical', fecha:d.fecha, archivedAt:new Date().toISOString(), data:dataSnapshot});
+    const anunciosVigentes = filtrarAnunciosVigentes(d.anuncios);
     state.dominical = defaultDominical();
     state.dominical.barrioRama = state.barrioNombre;
+    state.dominical.anuncios = anunciosVigentes;
     state.pendingRemoteDominical = null;
     await setDoc(refDominical(), Object.assign({}, state.dominical, {_writer:sessionId}));
     render();
-    toast(`Reunión archivada. ${guardados} discursante(s) registrado(s) en la bitácora.`);
+    toast(`Reunión archivada. ${guardados} discursante(s) registrado(s)${anunciosVigentes.length? `, ${anunciosVigentes.length} anuncio(s) vigente(s) trasladado(s)`:''}.`);
   }catch(e){
     alert('No se pudo archivar la reunión: '+(e.message||e));
   }
 };
+function filtrarAnunciosVigentes(anuncios){
+  const hoy = new Date().toISOString().slice(0,10);
+  return (anuncios||[])
+    .map(a=> typeof a==='string' ? {texto:a, fechaLimite:''} : a)
+    .filter(a=> a.fechaLimite && a.fechaLimite >= hoy);
+}
 window.finalizarAyuno = async function(){
   const a = state.ayuno;
   if(!a.fecha){ alert('Ingresa la fecha de la reunión antes de archivarla.'); return; }
@@ -2100,12 +2108,14 @@ window.finalizarAyuno = async function(){
   dataSnapshot.familiasNoAsistieron = [...state.familiasData.list];
   try{
     await addDoc(colReuniones(), {tipo:'Reunión de Ayuno y Testimonio', fecha:a.fecha, archivedAt:new Date().toISOString(), data:dataSnapshot});
+    const anunciosVigentes = filtrarAnunciosVigentes(a.anuncios);
     state.ayuno = defaultAyuno();
     state.ayuno.barrio = state.barrioNombre;
+    state.ayuno.anuncios = anunciosVigentes;
     state.pendingRemoteAyuno = null;
     await setDoc(refAyuno(), Object.assign({}, state.ayuno, {_writer:sessionId}));
     render();
-    toast('Reunión archivada. Puedes editarla desde la Bitácora de Reuniones si es necesario.');
+    toast(`Reunión archivada${anunciosVigentes.length? `. ${anunciosVigentes.length} anuncio(s) vigente(s) trasladado(s)`:''}.`);
   }catch(e){
     alert('No se pudo archivar la reunión: '+(e.message||e));
   }
