@@ -581,8 +581,9 @@ async function cargarSesionBarrio(barrioId, nombre){
     const reg = {};
     snap.docs.forEach(d=>{ reg[d.id] = d.data(); });
     state.registry = reg;
+    console.log('[Discursantes] Listener recibió', snap.docs.length, 'documento(s) de la colección discursantes:', reg);
     if(state.stage==='app' && (state.view==='discursantes' || state.view==='dominical')) renderSiNoEscribiendo();
-  }));
+  }, err=>{ console.error('[Discursantes] ❌ Error del listener (probablemente permisos):', err); }));
   state.unsubs.push(onSnapshot(query(collection(db,'anunciosGenerales'), orderBy('creadoEn','desc')), snap=>{
     state.anunciosGenerales = snap.docs.map(d=>({id:d.id, ...d.data()}));
     if(state.stage==='app' && (state.view==='dominical' || state.view==='ayuno' || state.view==='home')) renderSiNoEscribiendo();
@@ -2062,23 +2063,30 @@ window.finalizarDominical = async function(){
 
   // 1) Registrar discursantes primero, para no perderlos si algo falla
   const conNombre = (d.discursantes||[]).filter(dc=> dc.nombre && dc.nombre.trim());
+  console.log('[Discursantes] Barrio actual:', state.barrioId);
+  console.log('[Discursantes] Total en el arreglo d.discursantes:', (d.discursantes||[]).length, JSON.parse(JSON.stringify(d.discursantes||[])));
+  console.log('[Discursantes] Con nombre válido para registrar:', conNombre.length, JSON.parse(JSON.stringify(conNombre)));
   let guardados = 0;
   for(const dc of conNombre){
     try{
-      const ref = doc(colDiscursantes(), slugPersona(dc.nombre));
+      const clave = slugPersona(dc.nombre);
+      console.log(`[Discursantes] Procesando "${dc.nombre}" → clave del documento: "${clave}"`);
+      const ref = doc(colDiscursantes(), clave);
       const snap = await getDoc(ref);
       const historialPrevio = (snap.exists() && Array.isArray(snap.data().historial)) ? snap.data().historial : [];
       const nuevoRegistro = {fecha:d.fecha, tiempo:dc.tiempo||'', tema:dc.tema||''};
       const yaExiste = historialPrevio.some(h=> h.fecha===nuevoRegistro.fecha && h.tema===nuevoRegistro.tema);
       const historial = yaExiste ? historialPrevio : [...historialPrevio, nuevoRegistro];
       await setDoc(ref, {nombre: dc.nombre.trim(), historial}, {merge:true});
+      console.log(`[Discursantes] ✅ Guardado correctamente: "${dc.nombre}" — historial ahora tiene ${historial.length} entrada(s).`);
       guardados++;
     }catch(e){
-      console.error('Error al registrar discursante', dc.nombre, e);
+      console.error('[Discursantes] ❌ ERROR al registrar', dc.nombre, e);
       alert(`No se pudo registrar a "${dc.nombre}" en la bitácora: ${e.message||e}\n\nLa reunión NO se archivó. Corrige el problema e inténtalo de nuevo.`);
       return;
     }
   }
+  console.log('[Discursantes] Proceso terminado. Total guardados:', guardados);
 
   // 2) Archivar la reunión
   try{
