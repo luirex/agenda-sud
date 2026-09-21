@@ -2105,9 +2105,15 @@ window.finalizarDominical = async function(){
 };
 function filtrarAnunciosVigentes(anuncios){
   const hoy = new Date().toISOString().slice(0,10);
-  return (anuncios||[])
-    .map(a=> typeof a==='string' ? {texto:a, fechaLimite:''} : a)
-    .filter(a=> a.fechaLimite && a.fechaLimite >= hoy);
+  console.log('[Anuncios] Fecha de hoy usada para comparar:', hoy);
+  console.log('[Anuncios] Arreglo de anuncios recibido:', JSON.parse(JSON.stringify(anuncios||[])));
+  const normalizados = (anuncios||[]).map(a=> typeof a==='string' ? {texto:a, fechaLimite:''} : a);
+  normalizados.forEach(a=>{
+    console.log(`[Anuncios] "${a.texto}" → fechaLimite: "${a.fechaLimite||'(sin fecha)'}" → ¿vigente?`, !!(a.fechaLimite && a.fechaLimite >= hoy));
+  });
+  const vigentes = normalizados.filter(a=> a.fechaLimite && a.fechaLimite >= hoy);
+  console.log('[Anuncios] Total que pasan a la siguiente reunión:', vigentes.length, vigentes);
+  return vigentes;
 }
 window.finalizarAyuno = async function(){
   const a = state.ayuno;
