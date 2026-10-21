@@ -453,6 +453,7 @@ function defaultDominical(){
     bienvenida:'',
     primerHimno:'', primeraOracion:'',
     anuncios:[],
+    anunciosDescartados:[],
     asuntosBarrio:[],
     confirmacionNuevosMiembros:'',
     himnoSacramental:'',
@@ -471,6 +472,7 @@ function defaultAyuno(){
     preside:'', dirige:'', pianista:'', direccionMusica:'',
     bienvenida:'',
     anuncios:[],
+    anunciosDescartados:[],
     primerHimno:'', primeraOracion:'',
     asuntosBarrio:[],
     confirmacionMiembrosNuevos:['','',''],
@@ -500,6 +502,7 @@ const state = {
   dominical:null, ayuno:null,
   log:[], registry:{},
   anunciosGenerales:[],
+  anunciosBarrio:{items:[]},
   oracionesSacramentales:{pan:'', agua:''},
   catalogoHimnos:{himnarioSUD:[], nuevaColeccion:[]},
   familiasData:{list:[], resetBoundary:null},
@@ -513,11 +516,13 @@ function refDominical(){ return doc(db,'barrios',state.barrioId,'estado','domini
 function refAyuno(){ return doc(db,'barrios',state.barrioId,'estado','ayuno'); }
 function refFamilias(){ return doc(db,'barrios',state.barrioId,'estado','familias'); }
 function refConfig(){ return doc(db,'barrios',state.barrioId,'estado','config'); }
+function refAnunciosBarrio(){ return doc(db,'barrios',state.barrioId,'estado','anuncios'); }
 function colReuniones(){ return collection(db,'barrios',state.barrioId,'reuniones'); }
 function colDiscursantes(){ return collection(db,'barrios',state.barrioId,'discursantes'); }
 
 const sessionId = Math.random().toString(36).slice(2) + Date.now();
 const saveDominical = debounce(()=>setDoc(refDominical(), Object.assign({}, state.dominical, {_writer:sessionId}), {merge:true}).catch(onSaveError), 500);
+const saveAnunciosBarrio = debounce(()=>setDoc(refAnunciosBarrio(), {items: state.anunciosBarrio.items, migrado: !!state.anunciosBarrio.migrado, _writer:sessionId}).catch(onSaveError), 400);
 const saveAyuno = debounce(()=>setDoc(refAyuno(), Object.assign({}, state.ayuno, {_writer:sessionId}), {merge:true}).catch(onSaveError), 500);
 window.saveDominical = saveDominical;
 window.saveAyuno = saveAyuno;
@@ -574,6 +579,7 @@ async function cargarSesionBarrio(barrioId, nombre){
       if(nuevo._writer === sessionId && actualPorId[d.id]) return actualPorId[d.id];
       return nuevo;
     }).sort((a,b)=> (b.archivedAt||'').localeCompare(a.archivedAt||''));
+    rescatarAnunciosVigentes();
     if(state.stage==='app' && state.view==='reuniones') renderSiNoEscribiendo();
     if(state.stage==='app' && state.view==='home') renderSiNoEscribiendo();
   }));
@@ -584,6 +590,14 @@ async function cargarSesionBarrio(barrioId, nombre){
     console.log('[Discursantes] Listener recibió', snap.docs.length, 'documento(s) de la colección discursantes:', reg);
     if(state.stage==='app' && (state.view==='discursantes' || state.view==='dominical')) renderSiNoEscribiendo();
   }, err=>{ console.error('[Discursantes] ❌ Error del listener (probablemente permisos):', err); }));
+  state.unsubs.push(onSnapshot(refAnunciosBarrio(), snap=>{
+    const data = snap.exists() ? snap.data() : {};
+    if(data._writer !== sessionId || !state.anunciosBarrio.cargado){
+      state.anunciosBarrio = {items: Array.isArray(data.items) ? data.items : [], migrado: !!data.migrado, cargado:true};
+      if(state.stage==='app' && (state.view==='dominical' || state.view==='ayuno') && !usuarioEstaEscribiendo()) render();
+    }
+    rescatarAnunciosVigentes();
+  }, err=>{ console.error('[Anuncios] Error del listener:', err); }));
   state.unsubs.push(onSnapshot(query(collection(db,'anunciosGenerales'), orderBy('creadoEn','desc')), snap=>{
     state.anunciosGenerales = snap.docs.map(d=>({id:d.id, ...d.data()}));
     if(state.stage==='app' && (state.view==='dominical' || state.view==='ayuno' || state.view==='home')) renderSiNoEscribiendo();
@@ -606,6 +620,7 @@ async function cargarSesionBarrio(barrioId, nombre){
       state.dominical = Object.assign(defaultDominical(), remoto);
       state.pendingRemoteDominical = null;
     }
+    rescatarAnunciosVigentes();
     if(state.stage==='app' && state.view==='dominical') renderSiNoEscribiendo();
   }));
   state.unsubs.push(onSnapshot(refAyuno(), snap=>{
@@ -618,6 +633,7 @@ async function cargarSesionBarrio(barrioId, nombre){
       state.ayuno = Object.assign(defaultAyuno(), remoto);
       state.pendingRemoteAyuno = null;
     }
+    rescatarAnunciosVigentes();
     if(state.stage==='app' && state.view==='ayuno') renderSiNoEscribiendo();
   }));
 
@@ -870,7 +886,7 @@ window.agregarAnuncioGeneral = async function(){
   }
 };
 async function limpiarAnunciosVencidos(lista){
-  const hoy = new Date().toISOString().slice(0,10);
+  const hoy = hoyLocalISO();
   const vencidos = lista.filter(a=> a.fechaLimite && a.fechaLimite < hoy);
   for(const a of vencidos){
     try{ await deleteDoc(doc(db,'anunciosGenerales', a.id)); }catch(e){ /* se ignora, se reintenta después */ }
@@ -1237,12 +1253,12 @@ function slugPersona(nombre){
 }
 
 /* ============ CUADRO UNIFICADO DE ANUNCIOS/ASUNTOS (generales + del barrio) ============ */
-function makeAnunciosBox(containerId, getArr, onSave, getGenerales){
+function makeAnunciosBox(containerId, getArr, onSave, getGenerales, onRemove){
   let editandoIdx = null;
   const mgr = {
     render(){
       const refArr = getArr() || [];
-      const hoy = new Date().toISOString().slice(0,10);
+      const hoy = hoyLocalISO();
       const antes = refArr.length;
       const vigentes = refArr.filter(it=>{
         const obj = (typeof it==='string') ? {texto:it, fechaLimite:''} : it;
@@ -1291,7 +1307,7 @@ function makeAnunciosBox(containerId, getArr, onSave, getGenerales){
       qs(containerId).querySelectorAll('textarea.auto-grow').forEach(autoGrow);
     },
     addWithValue(val){ getArr().push(val); mgr.render(); onSave(); },
-    remove(idx){ if(editandoIdx===idx) editandoIdx=null; getArr().splice(idx,1); mgr.render(); onSave(); },
+    remove(idx){ if(editandoIdx===idx) editandoIdx=null; const rm=getArr().splice(idx,1)[0]; if(onRemove && rm && typeof rm==='object') onRemove(rm); mgr.render(); onSave(); },
     editar(idx){ editandoIdx = idx; mgr.render(); },
     cancelarEdicion(){ editandoIdx = null; mgr.render(); },
     guardarEdicion(idx){
@@ -1299,6 +1315,7 @@ function makeAnunciosBox(containerId, getArr, onSave, getGenerales){
       const fechaEl = qs(`${containerId}-edit-fecha-${idx}`);
       const texto = textoEl.value.trim();
       if(!texto){ alert('El texto no puede quedar vacío.'); return; }
+      const prev = getArr()[idx]; if(onRemove && prev && typeof prev==='object' && (prev.texto!==texto || (prev.fechaLimite||'')!==(fechaEl.value||''))) onRemove(prev);
       getArr()[idx] = {texto, fechaLimite: fechaEl.value || ''};
       editandoIdx = null;
       mgr.render(); onSave();
@@ -1449,7 +1466,7 @@ function selectLider(prefix, field, current){
   return `<select onchange="fieldUpdate('${prefix}','${field}',this.value)">${options}</select>`;
 }
 function bloqueAnunciosGenerales(){
-  const hoy = new Date().toISOString().slice(0,10);
+  const hoy = hoyLocalISO();
   const vigentes = (state.anunciosGenerales||[]).filter(a=> !a.fechaLimite || a.fechaLimite >= hoy);
   if(!vigentes.length) return '';
   return `<div class="anuncios-generales">
@@ -2036,10 +2053,14 @@ function renderAyuno(){
 /* ============ ENLACE DE LISTAS DINÁMICAS ============ */
 function bindMeetingLists(prefix, d, kind, onSave){
   const intentar = (fn)=>{ try{ fn(); }catch(e){ console.error('Error al renderizar lista:', e); } };
-  intentar(()=> makeAnunciosBox(`${prefix}-anuncios`, ()=> d.anuncios || (d.anuncios=[]), onSave, ()=>{
-    const hoy = new Date().toISOString().slice(0,10);
-    return (state.anunciosGenerales||[]).filter(a=> !a.fechaLimite || a.fechaLimite >= hoy);
-  }).render());
+  const esLog = prefix.startsWith('log-');
+  intentar(()=> makeAnunciosBox(`${prefix}-anuncios`,
+    esLog ? ()=> d.anuncios || (d.anuncios=[]) : ()=> state.anunciosBarrio.items || (state.anunciosBarrio.items=[]),
+    esLog ? onSave : saveAnunciosBarrio,
+    ()=>{
+      const hoy = hoyLocalISO();
+      return (state.anunciosGenerales||[]).filter(a=> !a.fechaLimite || a.fechaLimite >= hoy);
+    }).render());
   intentar(()=> makeAnunciosBox(`${prefix}-asuntos`, ()=> d.asuntosBarrio || (d.asuntosBarrio=[]), onSave).render());
   intentar(()=> makeSimpleList(`${prefix}-agradecimientos`, ()=> d.agradecimientos || (d.agradecimientos=[]), 'Agradecimiento', onSave, 0).render());
   intentar(()=> makeSimpleList(`${prefix}-familias`, ()=> {
@@ -2060,6 +2081,7 @@ window.finalizarDominical = async function(){
   if(!d.fecha){ alert('Ingresa la fecha de la reunión antes de archivarla.'); return; }
   const dataSnapshot = JSON.parse(JSON.stringify(d));
   dataSnapshot.familiasNoAsistieron = [...state.familiasData.list];
+  dataSnapshot.anuncios = JSON.parse(JSON.stringify(state.anunciosBarrio.items||[]));
 
   // 1) Registrar discursantes primero, para no perderlos si algo falla
   const conNombre = (d.discursantes||[]).filter(dc=> dc.nombre && dc.nombre.trim());
@@ -2091,20 +2113,50 @@ window.finalizarDominical = async function(){
   // 2) Archivar la reunión
   try{
     await addDoc(colReuniones(), {tipo:'Reunión Sacramental Dominical', fecha:d.fecha, archivedAt:new Date().toISOString(), data:dataSnapshot});
-    const anunciosVigentes = filtrarAnunciosVigentes(d.anuncios);
     state.dominical = defaultDominical();
     state.dominical.barrioRama = state.barrioNombre;
-    state.dominical.anuncios = anunciosVigentes;
     state.pendingRemoteDominical = null;
     await setDoc(refDominical(), Object.assign({}, state.dominical, {_writer:sessionId}));
     render();
-    toast(`Reunión archivada. ${guardados} discursante(s) registrado(s)${anunciosVigentes.length? `, ${anunciosVigentes.length} anuncio(s) vigente(s) trasladado(s)`:''}.`);
+    toast(`Reunión archivada. ${guardados} discursante(s) registrado(s).`);
   }catch(e){
     alert('No se pudo archivar la reunión: '+(e.message||e));
   }
 };
+function hoyLocalISO(){ const n=new Date(); return n.getFullYear()+'-'+String(n.getMonth()+1).padStart(2,'0')+'-'+String(n.getDate()).padStart(2,'0'); }
+function claveAnuncio(a){ return `${a.fechaLimite||''}|${a.texto||''}`; }
+function rescatarAnunciosVigentes(){
+  // Migración: pasa a la lista propia del barrio los anuncios que antes vivían en los borradores
+  // y (una sola vez) los vigentes de reuniones ya archivadas.
+  try{
+    if(!state.barrioId || state.anunciosBarrio.cargado!==true) return;
+    const items = state.anunciosBarrio.items;
+    const hoy = hoyLocalISO();
+    const claves = new Set(items.filter(a=>a&&typeof a==='object').map(claveAnuncio));
+    let cambio=false;
+    const agregar = a=>{
+      if(!a || typeof a!=='object' || !a.texto) return;
+      if(a.fechaLimite && a.fechaLimite < hoy) return;
+      const k = claveAnuncio(a); if(claves.has(k)) return;
+      claves.add(k); items.push({texto:a.texto, fechaLimite:a.fechaLimite||''}); cambio=true;
+    };
+    [['dominical',saveDominical],['ayuno',saveAyuno]].forEach(([k,guardar])=>{
+      const d = state[k]; if(!d || !Array.isArray(d.anuncios) || !d.anuncios.length) return;
+      d.anuncios.forEach(a=> agregar(typeof a==='string' ? {texto:a, fechaLimite:''} : a));
+      d.anuncios = []; guardar(); cambio=true;
+    });
+    if(!state.anunciosBarrio.migrado && (state.log||[]).length){
+      (state.log||[]).forEach(e=> ((e.data && e.data.anuncios)||[]).forEach(a=>{ if(a && a.fechaLimite) agregar(a); }));
+      state.anunciosBarrio.migrado = true; cambio=true;
+    }
+    if(cambio){
+      saveAnunciosBarrio();
+      if(state.stage==='app' && (state.view==='dominical'||state.view==='ayuno')) renderSiNoEscribiendo();
+    }
+  }catch(e){ console.error('[Anuncios] migración falló', e); }
+}
 function filtrarAnunciosVigentes(anuncios){
-  const hoy = new Date().toISOString().slice(0,10);
+  const hoy = hoyLocalISO();
   console.log('[Anuncios] Fecha de hoy usada para comparar:', hoy);
   console.log('[Anuncios] Arreglo de anuncios recibido:', JSON.parse(JSON.stringify(anuncios||[])));
   const normalizados = (anuncios||[]).map(a=> typeof a==='string' ? {texto:a, fechaLimite:''} : a);
@@ -2120,16 +2172,15 @@ window.finalizarAyuno = async function(){
   if(!a.fecha){ alert('Ingresa la fecha de la reunión antes de archivarla.'); return; }
   const dataSnapshot = JSON.parse(JSON.stringify(a));
   dataSnapshot.familiasNoAsistieron = [...state.familiasData.list];
+  dataSnapshot.anuncios = JSON.parse(JSON.stringify(state.anunciosBarrio.items||[]));
   try{
     await addDoc(colReuniones(), {tipo:'Reunión de Ayuno y Testimonio', fecha:a.fecha, archivedAt:new Date().toISOString(), data:dataSnapshot});
-    const anunciosVigentes = filtrarAnunciosVigentes(a.anuncios);
     state.ayuno = defaultAyuno();
     state.ayuno.barrio = state.barrioNombre;
-    state.ayuno.anuncios = anunciosVigentes;
     state.pendingRemoteAyuno = null;
     await setDoc(refAyuno(), Object.assign({}, state.ayuno, {_writer:sessionId}));
     render();
-    toast(`Reunión archivada${anunciosVigentes.length? `. ${anunciosVigentes.length} anuncio(s) vigente(s) trasladado(s)`:''}.`);
+    toast('Reunión archivada.');
   }catch(e){
     alert('No se pudo archivar la reunión: '+(e.message||e));
   }
