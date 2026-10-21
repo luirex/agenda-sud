@@ -212,6 +212,17 @@
     .print-footer{margin-top:26px;font-size:9.5px;color:#999;border-top:1px solid #E4DCC3;padding-top:8px;
       text-align:center;font-style:italic;letter-spacing:.3px;}
   }
+  .vista-comp{background:#fff;color:#1A1A1A;border:1px solid #C9A55C;border-radius:12px;padding:22px 20px;max-width:720px;margin:0 auto;}
+  .vista-comp .print-header{text-align:center;} .vista-comp .print-crest{width:34px;height:34px;margin:0 auto 6px;color:#8A6D2F;}
+  .vista-comp .print-crest svg{width:100%;height:100%;}
+  .vista-comp h1{font-family:'Playfair Display',Georgia,serif;font-size:24px;margin:2px 0 4px;color:#152238;}
+  .vista-comp .print-sub{font-size:12px;color:#555;margin:0;letter-spacing:1.5px;text-transform:uppercase;}
+  .vista-comp .print-verse{font-size:13px;color:#666;font-style:italic;margin:14px 0 18px;text-align:center;border-top:1px solid #DDD5BC;border-bottom:1px solid #DDD5BC;padding:9px 14px;}
+  .vista-comp .print-section{margin-bottom:16px;}
+  .vista-comp .print-section h3{font-family:'Playfair Display',Georgia,serif;font-size:14px;letter-spacing:.6px;color:#8A6D2F;text-transform:uppercase;border-bottom:1px solid #C9A55C;padding-bottom:4px;margin:0 0 9px;}
+  .vista-comp .print-row{font-size:15px;margin-bottom:5px;line-height:1.55;} .vista-comp .print-label{font-weight:700;color:#152238;}
+  .vista-comp .print-oracion{display:flex;align-items:flex-end;gap:6px;} .vista-comp .print-linea{flex:1;border-bottom:1px solid #999;min-height:18px;}
+  .vista-comp .print-footer{margin-top:20px;font-size:11px;color:#999;text-align:center;font-style:italic;}
   .anuncios-generales{background:var(--parchment-dark);border:1px solid var(--gold);border-radius:10px;
     padding:14px 18px;margin-bottom:14px;box-shadow:0 1px 4px rgba(21,34,56,.04);}
   .anuncios-generales-title{font-family:var(--font-display);font-weight:600;color:var(--heading);font-size:14px;margin-bottom:8px;}
@@ -667,7 +678,55 @@ window.reintentarAcceso = async function(){
   }
 };
 
+const tokenCompartido = new URLSearchParams(location.search).get('v');
+async function cargarReunionCompartida(token){
+  state.stage='compartida'; render();
+  try{
+    const snap = await getDoc(doc(db,'reunionesCompartidas',token));
+    if(!snap.exists()){ state.compartida = {error:'Este enlace no existe o la reunión dejó de compartirse.'}; }
+    else { state.compartida = snap.data(); state.barrioNombre = state.compartida.barrioNombre || ''; }
+  }catch(e){ state.compartida = {error:'No se pudo abrir la reunión compartida.'}; console.error(e); }
+  render();
+}
+window.imprimirCompartida = function(){
+  const c = state.compartida; if(!c || c.error) return;
+  qs('print-area').innerHTML = construirHtmlImprimible({tipo:c.tipo, fecha:c.fecha, data:c.data});
+  setTimeout(()=>window.print(), 80);
+};
+function renderCompartida(){
+  const c = state.compartida;
+  if(!c) return `<div class="gate-wrap"><p class="hint">Cargando reunión…</p></div>`;
+  if(c.error) return `<div class="gate-wrap"><div class="gate-card"><h1>Enlace no disponible</h1><p class="hint">${escapeHtml(c.error)}</p></div></div>`;
+  return `<div class="actions-row" style="max-width:720px;margin:0 auto 14px;justify-content:center;">
+    <button type="button" class="btn-primary" onclick="imprimirCompartida()">Imprimir / PDF</button></div>
+    <div class="vista-comp">${construirHtmlImprimible({tipo:c.tipo, fecha:c.fecha, data:c.data}).replace('class="print-page"','')}</div>`;
+}
+
+window.compartirReunion = async function(id){
+  const entry = state.log.find(e=>e.id===id); if(!entry) return;
+  try{
+    const token = entry.compartidoToken || (crypto.getRandomValues(new Uint8Array(16)).reduce((a,b)=>a+b.toString(16).padStart(2,'0'),''));
+    const data = JSON.parse(JSON.stringify(entry.data||{}));
+    delete data.observaciones; delete data.familiasNoAsistieron; // datos internos: no se comparten
+    await setDoc(doc(db,'reunionesCompartidas',token), {barrioId:state.barrioId, barrioNombre:state.barrioNombre, tipo:entry.tipo, fecha:entry.fecha, data, actualizadoEn:new Date().toISOString()});
+    if(!entry.compartidoToken){ entry.compartidoToken = token; await setDoc(doc(colReuniones(), id), {compartidoToken:token}, {merge:true}); }
+    const url = location.origin + location.pathname + '?v=' + token;
+    try{ await navigator.clipboard.writeText(url); toast('Enlace copiado al portapapeles'); }
+    catch(e){ prompt('Copia este enlace:', url); }
+  }catch(e){ alert('No se pudo generar el enlace: '+(e.message||e)); }
+};
+window.dejarDeCompartir = async function(id){
+  const entry = state.log.find(e=>e.id===id); if(!entry || !entry.compartidoToken) return;
+  if(!confirm('¿Dejar de compartir? El enlace actual dejará de funcionar.')) return;
+  try{
+    await deleteDoc(doc(db,'reunionesCompartidas',entry.compartidoToken));
+    await setDoc(doc(colReuniones(), id), {compartidoToken:''}, {merge:true});
+    entry.compartidoToken=''; renderSiNoEscribiendo(); toast('Ya no se comparte esta reunión');
+  }catch(e){ alert('No se pudo: '+(e.message||e)); }
+};
+
 onAuthStateChanged(auth, async (user)=>{
+  if(tokenCompartido) return;
   if(user){ await cargarSesion(user); }
   else { limpiarListeners(); state.stage='gate'; state.view='home'; render(); }
 });
@@ -1500,12 +1559,17 @@ function renderNav(){
   if(state.isAdmin) extra = `<button type="button" class="tab" onclick="state.stage='admin';render();">🛠 Panel admin</button>` + extra;
   qs('spine').innerHTML = `<div class="brand"><div class="crest">${CREST_SVG}</div><h1>Agenda Dominical</h1><p>${escapeHtml(state.barrioNombre)||'Agenda dominical del barrio'}</p></div>${spine}
     <div style="margin-top:auto;">${extra}</div>
-    <div class="footer-note">"La reverencia invita a la revelación."<br>— Élder Boyd K. Packer</div>`;
+    <div class="footer-note">"La reverencia invita a la revelación."<br>— Élder Boyd K. Packer<br><span style="opacity:.6">Versión 21-oct (compartir)</span></div>`;
   qs('topbar').innerHTML = spine + extra;
 }
 
 /* ============ RENDER MAESTRO ============ */
 function render(){
+  if(state.stage==='compartida'){
+    qs('spine').innerHTML=''; qs('topbar').innerHTML='';
+    qs('pageInner').innerHTML = renderCompartida();
+    return;
+  }
   if(state.stage==='loading'){
     qs('spine').innerHTML=''; qs('topbar').innerHTML='';
     qs('pageInner').innerHTML = `<div class="gate-wrap"><p class="hint">Cargando…</p></div>`;
@@ -2438,12 +2502,14 @@ function renderReuniones(){
         <div><div class="tipo">${escapeHtml(entry.tipo)}</div><div class="fecha">${fmtFecha(entry.fecha)}</div></div>
         <div style="display:flex;align-items:center;gap:10px;">
           <button type="button" class="btn-secondary no-lock" style="padding:6px 12px;font-size:12px;" onclick="event.stopPropagation();imprimirReunion('${entry.id}')">🖨️ Imprimir / PDF</button>
+          <button type="button" class="btn-secondary no-lock" style="padding:6px 12px;font-size:12px;" onclick="event.stopPropagation();compartirReunion('${entry.id}')">🔗 Compartir</button>
           <span>${open?'▲':'▼'}</span>
         </div>
       </div>
       <div class="log-body ${open?'open':''}">${inner}</div>
       ${open?`<div class="log-actions">
         <button type="button" class="btn-primary" onclick="guardarLogAhora('${entry.id}')">Guardar cambios</button>
+        ${entry.compartidoToken?`<button type="button" class="btn-secondary" onclick="dejarDeCompartir('${entry.id}')">Dejar de compartir</button>`:''}
         <button type="button" class="btn-secondary" onclick="eliminarLog('${entry.id}')">Eliminar del archivo</button>
       </div>`:''}
     </div>`;
@@ -2530,6 +2596,7 @@ function bindConfigLists(){
   makeSimpleList('config-directores', ()=>state.config.directoresMusica||(state.config.directoresMusica=[]), 'Nombre completo', saveConfig, 0).render();
   makeSimpleList('config-miembros', ()=>state.config.miembros, 'Nombre completo', saveConfig, 0).render();
 }
+if(tokenCompartido){ cargarReunionCompartida(tokenCompartido); }
 </script>
 </body>
 </html>
