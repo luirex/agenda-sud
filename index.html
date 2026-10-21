@@ -486,7 +486,7 @@ function defaultAyuno(){
     observaciones:''
   };
 }
-function defaultConfig(){ return {nombresLideres:[], miembros:[]}; }
+function defaultConfig(){ return {nombresLideres:[], pianistas:[], directoresMusica:[], miembros:[]}; }
 window.defaultDominical = defaultDominical;
 window.defaultAyuno = defaultAyuno;
 
@@ -1457,8 +1457,8 @@ function fieldUpdate(prefix, field, val){
   formBindings[prefix].onSave();
 }
 window.fieldUpdate = fieldUpdate;
-function selectLider(prefix, field, current){
-  const opts = state.config.nombresLideres.slice();
+function selectLider(prefix, field, current, listaKey){
+  const opts = (state.config[listaKey||'nombresLideres']||[]).slice();
   if(current && !opts.includes(current)) opts.push(current);
   const options = ['<option value="">— Seleccionar —</option>'].concat(
     opts.map(n=>`<option value="${escapeAttr(n)}" ${n===current?'selected':''}>${escapeHtml(n)}</option>`)
@@ -1835,8 +1835,8 @@ function fieldsetsDominical(prefix, d, onSave){
       <div><label>Dirige</label>${selectLider(prefix,'dirige',d.dirige)}</div>
     </div>
     <div class="grid2">
-      <div><label>Pianista</label><textarea rows="1" class="auto-grow" oninput="autoGrow(this);fieldUpdate('${prefix}','pianista',this.value)">${escapeHtml(d.pianista)}</textarea></div>
-      <div><label>Dirección de la música</label><textarea rows="1" class="auto-grow" oninput="autoGrow(this);fieldUpdate('${prefix}','direccionMusica',this.value)">${escapeHtml(d.direccionMusica)}</textarea></div>
+      <div><label>Pianista</label>${selectLider(prefix,'pianista',d.pianista,'pianistas')}</div>
+      <div><label>Dirección de la música</label>${selectLider(prefix,'direccionMusica',d.direccionMusica,'directoresMusica')}</div>
     </div>
     <label>Bienvenida (reconocimiento de la autoridad que preside)</label>
     <textarea rows="1" class="auto-grow" oninput="autoGrow(this);fieldUpdate('${prefix}','bienvenida',this.value)">${escapeHtml(d.bienvenida)}</textarea>
@@ -1949,8 +1949,8 @@ function fieldsetsAyuno(prefix, a, onSave){
       <div><label>Dirige</label>${selectLider(prefix,'dirige',a.dirige)}</div>
     </div>
     <div class="grid2">
-      <div><label>Pianista</label><textarea rows="1" class="auto-grow" oninput="autoGrow(this);fieldUpdate('${prefix}','pianista',this.value)">${escapeHtml(a.pianista)}</textarea></div>
-      <div><label>Dirección de la música</label><textarea rows="1" class="auto-grow" oninput="autoGrow(this);fieldUpdate('${prefix}','direccionMusica',this.value)">${escapeHtml(a.direccionMusica)}</textarea></div>
+      <div><label>Pianista</label>${selectLider(prefix,'pianista',a.pianista,'pianistas')}</div>
+      <div><label>Dirección de la música</label>${selectLider(prefix,'direccionMusica',a.direccionMusica,'directoresMusica')}</div>
     </div>
     <label>Bienvenida (reconocimiento de la autoridad que preside)</label>
     <textarea rows="1" class="auto-grow" oninput="autoGrow(this);fieldUpdate('${prefix}','bienvenida',this.value)">${escapeHtml(a.bienvenida)}</textarea>
@@ -2492,6 +2492,16 @@ function renderConfig(){
     <div id="config-lideres"></div>
   </fieldset>
   <fieldset>
+    <legend>Pianistas</legend>
+    <p class="hint">Nombres entre los que podrás elegir al llenar "Pianista" en ambas agendas.</p>
+    <div id="config-pianistas"></div>
+  </fieldset>
+  <fieldset>
+    <legend>Dirección de la música</legend>
+    <p class="hint">Nombres entre los que podrás elegir al llenar "Dirección de la música" en ambas agendas.</p>
+    <div id="config-directores"></div>
+  </fieldset>
+  <fieldset>
     <legend>Miembros del barrio (para buscar discursantes)</legend>
     <p class="hint">Pega aquí tu listado de miembros, uno por línea (o separados por coma). Al escribir un nombre en "Discursantes" te irán apareciendo las coincidencias de esta lista, aunque la persona nunca haya hablado antes.</p>
     <textarea id="config-miembros-bulk" class="auto-grow" rows="1" placeholder="Ej.:&#10;Juan Pérez&#10;María López&#10;Carlos Sánchez" oninput="autoGrow(this)"></textarea>
@@ -2516,6 +2526,8 @@ window.cargarMiembrosBulk = function(){
 };
 function bindConfigLists(){
   makeSimpleList('config-lideres', ()=>state.config.nombresLideres, 'Nombre completo', saveConfig, 0).render();
+  makeSimpleList('config-pianistas', ()=>state.config.pianistas||(state.config.pianistas=[]), 'Nombre completo', saveConfig, 0).render();
+  makeSimpleList('config-directores', ()=>state.config.directoresMusica||(state.config.directoresMusica=[]), 'Nombre completo', saveConfig, 0).render();
   makeSimpleList('config-miembros', ()=>state.config.miembros, 'Nombre completo', saveConfig, 0).render();
 }
 </script>
