@@ -7,7 +7,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,500;0,600;0,700;1,500&family=Source+Sans+3:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
-  <style>
+<style>
   :root{
     --navy:#152238; --navy-deep:#0D1929;
     --parchment:#FBF8F3; --parchment-dark:#EFE7D6;
@@ -19,6 +19,10 @@
     --font-body:'Source Sans 3','Segoe UI',Tahoma,system-ui,sans-serif;
     --font-mono:'JetBrains Mono','SF Mono','Consolas',ui-monospace,monospace;
   }
+  html[data-palette="oceano"]{--navy:#12304A;--navy-deep:#0A1D2E;--gold:#2A7F9E;--gold-soft:#5BAFCB;--heading:#12304A;--burgundy:#1F5F7A;--burgundy-dark:#164558;--btn-sec-border:#12304A;--line:#CFE0E8;}
+  html[data-palette="bosque"]{--navy:#1F3A2B;--navy-deep:#12261B;--gold:#7A8B3A;--gold-soft:#A3B45C;--heading:#1F3A2B;--burgundy:#3F6B4A;--burgundy-dark:#2E5037;--btn-sec-border:#1F3A2B;--line:#D5DEC8;}
+  html[data-palette="vino"]{--navy:#3A1420;--navy-deep:#240B14;--heading:#5C1A25;--btn-sec-border:#5C1A25;--line:#E3D2C9;}
+  html[data-palette="grafito"]{--navy:#262B33;--navy-deep:#16191E;--gold:#8A8F99;--gold-soft:#B4B8C0;--heading:#262B33;--burgundy:#4A5160;--burgundy-dark:#363C48;--btn-sec-border:#262B33;--line:#D9DBDF;}
   html[data-theme="dark"]{
     --parchment:#181510; --parchment-dark:#221E17;
     --ink:#EFE7D6; --ink-soft:#B3A88C; --line:#3D3628;
@@ -27,8 +31,22 @@
   }
   html[data-font="sans"]{ --font-display:'Segoe UI',Tahoma,system-ui,sans-serif; --font-body:'Segoe UI',Tahoma,system-ui,sans-serif; }
   html[data-font="serif"]{ --font-display:Georgia,'Times New Roman',serif; --font-body:Georgia,'Times New Roman',serif; }
-  html[data-fontsize="grande"]{ zoom:1.15; }
-  html[data-fontsize="xl"]{ zoom:1.3; }
+  html[data-font="legible"]{ --font-display:Verdana,Geneva,sans-serif; --font-body:Verdana,Geneva,sans-serif; }
+  html[data-fondo="blanco"]:not([data-theme="dark"]){--parchment:#FFFFFF;--parchment-dark:#F1F1F1;--card-bg:#FFFFFF;--input-bg:#FFFFFF;--line:#E3E3E3;}
+  html[data-fondo="gris"]:not([data-theme="dark"]){--parchment:#F1F2F4;--parchment-dark:#E3E5E9;--card-bg:#FAFAFB;--input-bg:#FFFFFF;--line:#D5D8DD;}
+  html[data-fondo="azul"]:not([data-theme="dark"]){--parchment:#EEF4F9;--parchment-dark:#DCE8F1;--card-bg:#F8FBFD;--input-bg:#FFFFFF;--line:#CFE0E8;}
+  html[data-fondo="verde"]:not([data-theme="dark"]){--parchment:#F0F5EE;--parchment-dark:#DFE9DB;--card-bg:#F9FCF8;--input-bg:#FFFFFF;--line:#D5DEC8;}
+  html[data-fondo="sepia"]:not([data-theme="dark"]){--parchment:#F4ECDD;--parchment-dark:#E8DAC0;--card-bg:#FBF5E8;--input-bg:#FFFDF6;--line:#DCCBA8;}
+  html[data-fontsize="pequeno"]{ zoom:.92; --z:.92; }
+  html[data-fontsize="grande"]{ zoom:1.15; --z:1.15; }
+  html[data-fontsize="xl"]{ zoom:1.3; --z:1.3; }
+  html[data-fontsize] #spine{ height:calc(100vh / var(--z,1)); }
+  @media print{ html{ zoom:1 !important; } }
+  .apar-grid{display:flex;flex-wrap:wrap;gap:10px;margin:6px 0 14px;}
+  .apar-opt{display:flex;align-items:center;gap:8px;padding:8px 12px;border:1.5px solid var(--line);border-radius:10px;
+    background:var(--card-bg);cursor:pointer;font-family:var(--font-body);font-size:13.5px;color:var(--ink);}
+  .apar-opt:hover{border-color:var(--gold);} .apar-opt.sel{border-color:var(--gold);box-shadow:0 0 0 2px var(--gold-soft);font-weight:600;}
+  .apar-sw{width:20px;height:20px;border-radius:50%;border:1px solid rgba(0,0,0,.2);flex-shrink:0;}
   html[data-theme="dark"] .toast{ background:#000; }
   .theme-toggle-btn{position:fixed;top:16px;right:16px;z-index:60;background:var(--card-bg);
     border:1px solid var(--line);border-radius:50%;width:42px;height:42px;cursor:pointer;
@@ -422,6 +440,55 @@ window.guardarOracionesSacramentales = async function(){
   }
 };
 
+
+/* ============ APARIENCIA POR BARRIO ============ */
+const PALETAS = {clasico:['Clásico','#B08A3E'], oceano:['Océano','#2A7F9E'], bosque:['Bosque','#7A8B3A'], vino:['Vino','#7A2331'], grafito:['Grafito','#8A8F99']};
+const FONDOS = {crema:['Crema','#FBF8F3'], blanco:['Blanco','#FFFFFF'], gris:['Gris claro','#F1F2F4'], azul:['Azul claro','#EEF4F9'], verde:['Verde claro','#F0F5EE'], sepia:['Sepia','#F4ECDD']};
+const FUENTES = {clasica:['Clásica (elegante)',"'Playfair Display',Georgia,serif"], moderna:['Moderna',"'Segoe UI',Tahoma,sans-serif"], serif:['Serif (Georgia)','Georgia,serif'], legible:['Muy legible (Verdana)','Verdana,Geneva,sans-serif']};
+const TAMANOS = {pequeno:'Pequeño', normal:'Normal', grande:'Grande', xl:'Muy grande'};
+function aplicarApariencia(a){
+  a = a || {};
+  const h = document.documentElement;
+  const set = (attr, val, def, mapaFuente)=>{ if(!val || val===def) h.removeAttribute(attr); else h.setAttribute(attr, val); };
+  set('data-palette', a.paleta, 'clasico');
+  set('data-fondo', a.fondo, 'crema');
+  set('data-font', a.fuente==='clasica'?'':a.fuente==='moderna'?'sans':a.fuente, '');
+  set('data-fontsize', a.tamano, 'normal');
+}
+window.cambiarApariencia = function(clave, valor){
+  state.config.apariencia = Object.assign({}, state.config.apariencia||{}, {[clave]:valor});
+  aplicarApariencia(state.config.apariencia);
+  saveConfig();
+  render();
+};
+window.restablecerApariencia = function(){
+  state.config.apariencia = {};
+  aplicarApariencia({});
+  saveConfig();
+  render();
+};
+function opcionesApariencia(clave, mapa, actual, def, conMuestra){
+  return `<div class="apar-grid">`+Object.entries(mapa).map(([k,v])=>{
+    const sel = (actual||def)===k;
+    const etiqueta = Array.isArray(v)? v[0] : v;
+    const muestra = conMuestra==='color' ? `<span class="apar-sw" style="background:${v[1]}"></span>` : '';
+    const estilo = conMuestra==='fuente' ? ` style="font-family:${v[1]}"` : '';
+    return `<button type="button" class="apar-opt ${sel?'sel':''}"${estilo} onclick="cambiarApariencia('${clave}','${k}')">${muestra}${escapeHtml(etiqueta)}</button>`;
+  }).join('')+`</div>`;
+}
+function fieldsetApariencia(){
+  const a = state.config.apariencia || {};
+  return `<fieldset>
+    <legend>Apariencia de este barrio</legend>
+    <p class="hint">Estos ajustes se guardan para todo el barrio y se ven igual en todos sus dispositivos. El modo oscuro/claro se cambia con el botón de arriba a la derecha (es personal de cada dispositivo).</p>
+    <label>Tema de colores</label>${opcionesApariencia('paleta', PALETAS, a.paleta, 'clasico', 'color')}
+    <label>Color de fondo (modo claro)</label>${opcionesApariencia('fondo', FONDOS, a.fondo, 'crema', 'color')}
+    <label>Tipo de letra</label>${opcionesApariencia('fuente', FUENTES, a.fuente, 'clasica', 'fuente')}
+    <label>Tamaño de letra</label>${opcionesApariencia('tamano', TAMANOS, a.tamano, 'normal', '')}
+    <button type="button" class="btn-secondary" onclick="restablecerApariencia()">Restablecer apariencia</button>
+  </fieldset>`;
+}
+
 /* ============ TEMA (claro/oscuro) — preferencia local del dispositivo ============ */
 function initTheme(){
   const saved = localStorage.getItem('preferencia-tema') || 'light';
@@ -497,7 +564,7 @@ function defaultAyuno(){
     observaciones:''
   };
 }
-function defaultConfig(){ return {nombresLideres:[], pianistas:[], directoresMusica:[], miembros:[]}; }
+function defaultConfig(){ return {apariencia:{}, nombresLideres:[], pianistas:[], directoresMusica:[], miembros:[]}; }
 window.defaultDominical = defaultDominical;
 window.defaultAyuno = defaultAyuno;
 
@@ -580,6 +647,7 @@ async function cargarSesionBarrio(barrioId, nombre){
   state.ayuno = Object.assign(defaultAyuno(), ayuSnap.exists()? ayuSnap.data() : {barrio: nombre});
   state.familiasData = Object.assign({list:[],resetBoundary:null}, famSnap.exists()? famSnap.data() : {});
   checkFamiliasReset();
+  aplicarApariencia(state.config.apariencia);
 
   limpiarListeners();
   state.unsubs.push(onSnapshot(query(colReuniones(), orderBy('archivedAt','desc')), snap=>{
@@ -728,7 +796,7 @@ window.dejarDeCompartir = async function(id){
 onAuthStateChanged(auth, async (user)=>{
   if(tokenCompartido) return;
   if(user){ await cargarSesion(user); }
-  else { limpiarListeners(); state.stage='gate'; state.view='home'; render(); }
+  else { limpiarListeners(); aplicarApariencia({}); state.stage='gate'; state.view='home'; render(); }
 });
 
 window.intentarLogin = async function(){
@@ -2552,6 +2620,7 @@ function renderConfig(){
     <div><div class="hint" style="margin:0;">Correo de acceso de este barrio</div>
     <div class="admin-code" style="font-size:14px;">${escapeHtml(state.authUser ? state.authUser.email : '')}</div></div>
   </div>
+  ${fieldsetApariencia()}
   <fieldset>
     <legend>Nombres para Preside / Dirige</legend>
     <p class="hint">Agrega aquí los nombres que suelen presidir o dirigir la reunión; aparecerán como lista desplegable en ambas agendas.</p>
