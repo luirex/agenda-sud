@@ -241,6 +241,8 @@
   .prog-doc .print-oracion .print-label{flex:0 0 auto;max-width:45%;}
   .prog-doc .print-oracion .print-linea{flex:1;min-width:0;border-bottom:1px solid #999;min-height:22px;padding:0 3px 3px;line-height:1.45;overflow-wrap:anywhere;}
   .prog-doc .print-verse{margin:16px 0 18px;line-height:1.5;}
+  body.modo-invitado #spine,body.modo-invitado #topbar{display:none !important;}
+  .grid2>div,.grid3>div{min-width:0;} .grid2 textarea,.grid3 textarea,.grid2 input,.grid3 input{width:100%;box-sizing:border-box;}
   .vista-oraciones{margin:4px 0 8px;} .vo-botones{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:10px;}
   .vista-comp .oracion-card{margin-top:6px;}
   /* ---- Pantalla de ingreso premium ---- */
@@ -646,20 +648,78 @@ const PROG_PLANTILLAS = {
 };
 function progId8(){ return 'i'+Math.random().toString(36).slice(2,9); }
 function progNuevoItem(tipo, extra){ return {id:progId8(), t:tipo, v:Object.assign({}, (PROG_TIPOS[tipo]||{}).d||{}, extra||{})}; }
-const guardarPrograma = debounce(()=>{
-  const pr = state.programas.find(x=>x.id===state.progId); if(!pr) return;
-  const {id, ...resto} = pr;
-  setDoc(doc(db,'barrios',state.barrioId,'programas',id), Object.assign({}, resto, {_writer:sessionId, actualizado:new Date().toISOString()})).catch(onSaveError);
-}, 500);
+const COMP_CLAVES = ['titulo','fecha','hora','lugar','items'];
+function compPayload(pr, completo){
+  const o = {}; COMP_CLAVES.forEach(k=>{ o[k] = JSON.parse(JSON.stringify(pr[k]===undefined ? (k==='items'?[]:'') : pr[k])); });
+  o.actualizado = new Date().toISOString(); o._writer = sessionId;
+  if(completo){ o.tipo = pr.tipo||'blanco'; }
+  return o;
+}
 function guardarProgramaYa(){
   const pr = state.programas.find(x=>x.id===state.progId); if(!pr) return Promise.resolve();
+  if(state.compMode){   // invitado con enlace de editor
+    return setDoc(doc(db,'programasCompartidos',state.compMode.token), compPayload(pr), {merge:true}).catch(onSaveError);
+  }
   const {id, ...resto} = pr;
-  return setDoc(doc(db,'barrios',state.barrioId,'programas',id), Object.assign({}, resto, {_writer:sessionId, actualizado:new Date().toISOString()})).catch(onSaveError);
+  const tareas = [setDoc(doc(db,'barrios',state.barrioId,'programas',id), Object.assign({}, resto, {_writer:sessionId, actualizado:new Date().toISOString()}))];
+  if(pr.compToken) tareas.push(setDoc(doc(db,'programasCompartidos',pr.compToken), compPayload(pr), {merge:true}));
+  return Promise.all(tareas).catch(onSaveError);
 }
+const guardarPrograma = debounce(()=>{ guardarProgramaYa(); }, 500);
 window.progVer = async function(){ await guardarProgramaYa(); state.progVista=true; state.progPanel=false; render(); window.scrollTo(0,0); toast('Programa guardado'); };
-window.progEditar = function(){ state.progVista=false; render(); window.scrollTo(0,0); };
 function progActual(){ return state.programas.find(x=>x.id===state.progId); }
 
+function urlProg(token){ return location.origin + location.pathname + '?p=' + token; }
+window.progCompToggle = ()=>{ state.progCompOpen=!state.progCompOpen; render(); };
+window.progCompartir = async function(acceso){
+  const pr = progActual(); if(!pr) return;
+  const token = pr.compToken || crypto.getRandomValues(new Uint8Array(16)).reduce((a,b)=>a+b.toString(16).padStart(2,'0'),'');
+  try{
+    await setDoc(doc(db,'programasCompartidos',token), Object.assign(compPayload(pr,true), {barrioId:state.barrioId, barrioNombre:state.barrioNombre, acceso}), {merge:true});
+    pr.compToken = token; pr.compAcceso = acceso; await guardarProgramaYa();
+    sincronizarCompSubs(); render();
+    try{ await navigator.clipboard.writeText(urlProg(token)); toast('Enlace copiado ('+(acceso==='editor'?'editor':'lector')+')'); }catch(e){}
+  }catch(e){ alert('No se pudo compartir: '+(e.message||e)); }
+};
+window.progCopiarEnlace = async function(){ const pr=progActual(); if(!pr||!pr.compToken) return; try{ await navigator.clipboard.writeText(urlProg(pr.compToken)); toast('Enlace copiado'); }catch(e){ prompt('Copia este enlace:', urlProg(pr.compToken)); } };
+window.progDejarCompartir = async function(){
+  const pr = progActual(); if(!pr||!pr.compToken) return;
+  if(!confirm('¿Dejar de compartir? El enlace actual dejará de funcionar.')) return;
+  try{ await deleteDoc(doc(db,'programasCompartidos',pr.compToken)); }catch(e){ console.warn(e); }
+  if(state.compSubs[pr.compToken]){ try{ state.compSubs[pr.compToken](); }catch(e){} delete state.compSubs[pr.compToken]; }
+  pr.compToken=''; pr.compAcceso=''; await guardarProgramaYa(); render(); toast('Ya no se comparte');
+};
+function progCompPanelHtml(p){
+  if(!state.progCompOpen) return '';
+  const a = p.compAcceso||'';
+  const op = (k,t,d)=>`<button type="button" class="apar-opt ${a===k?'sel':''}" onclick="progCompartir('${k}')"><span><b>${t}</b><br><small>${d}</small></span></button>`;
+  return `<fieldset style="margin-bottom:16px;"><legend>Compartir este programa</legend>
+    <p class="hint">Quien reciba el enlace verá solo este programa, sin acceso a nada más del sistema. Elige el tipo de acceso:</p>
+    <div class="apar-grid">${op('lector','Lector','Solo puede ver la agenda')}${op('editor','Editor','Puede modificar la agenda')}</div>
+    ${p.compToken ? `<label>Enlace (${a==='editor'?'editor':'lector'})</label>
+      <input type="text" readonly value="${escapeAttr(urlProg(p.compToken))}" onfocus="this.select()">
+      <div class="actions-row"><button type="button" class="btn-primary" onclick="progCopiarEnlace()">Copiar enlace</button>
+      <button type="button" class="btn-secondary" onclick="progDejarCompartir()">Dejar de compartir</button></div>`
+      : `<p class="hint">Al elegir un tipo se genera el enlace y se copia automáticamente.</p>`}
+  </fieldset>`;
+}
+// El dueño recibe los cambios que haga un editor externo
+function sincronizarCompSubs(){
+  if(state.compSubsBarrio !== state.barrioId){ Object.values(state.compSubs).forEach(u=>{try{u();}catch(e){}}); state.compSubs={}; state.compSubsBarrio=state.barrioId; }
+  state.programas.forEach(pr=>{
+    if(!pr.compToken || state.compSubs[pr.compToken]) return;
+    const token = pr.compToken;
+    state.compSubs[token] = onSnapshot(doc(db,'programasCompartidos',token), snap=>{
+      if(!snap.exists()) return; const x = snap.data(); if(x._writer===sessionId) return;
+      const loc = state.programas.find(q=>q.compToken===token); if(!loc) return;
+      let cambio=false; COMP_CLAVES.forEach(k=>{ if(JSON.stringify(loc[k])!==JSON.stringify(x[k])){ loc[k]=x[k]; cambio=true; } });
+      if(!cambio) return;
+      const {id, ...resto} = loc;
+      setDoc(doc(db,'barrios',state.barrioId,'programas',id), Object.assign({}, resto, {_writer:sessionId, actualizado:new Date().toISOString()})).catch(()=>{});
+      if(state.stage==='app' && state.view==='programas') renderSiNoEscribiendo();
+    }, ()=>{});
+  });
+}
 window.progCrear = async function(){
   const tipo = qs('prog-nuevo-tipo').value;
   const titulo = qs('prog-nuevo-titulo').value.trim() || PROG_PLANTILLAS[tipo].n;
@@ -686,13 +746,14 @@ window.progQuitar = (iid)=>{ const pr=progActual(); if(!pr) return; pr.items=pr.
 window.progPanelToggle = ()=>{ state.progPanel=!state.progPanel; const e=qs('prog-side'); if(e) e.classList.toggle('open', state.progPanel); };
 window.progEliminar = async function(id){
   if(!confirm('¿Eliminar este programa? No se puede deshacer.')) return;
+  const _pe = state.programas.find(x=>x.id===id); if(_pe && _pe.compToken){ try{ await deleteDoc(doc(db,'programasCompartidos',_pe.compToken)); }catch(e){} }
   try{ await deleteDoc(doc(db,'barrios',state.barrioId,'programas',id)); state.programas=state.programas.filter(x=>x.id!==id); if(state.progId===id){ state.progId=null; state.progVista=false; } render(); toast('Programa eliminado'); }
   catch(e){ alert('No se pudo eliminar: '+(e.message||e)); }
 };
 window.progDuplicar = async function(id){
   const o = state.programas.find(x=>x.id===id); if(!o) return;
   const ref = doc(colProgramas());
-  const cp = JSON.parse(JSON.stringify(o)); cp.id=ref.id; cp.titulo=(o.titulo||'Programa')+' (copia)'; cp.fecha=''; cp.items.forEach(i=>i.id=progId8());
+  const cp = JSON.parse(JSON.stringify(o)); cp.id=ref.id; cp.titulo=(o.titulo||'Programa')+' (copia)'; cp.fecha=''; cp.compToken=''; cp.compAcceso=''; cp.items.forEach(i=>i.id=progId8());
   state.programas.push(cp); state.progId=cp.id; state.progVista=false; render(); window.scrollTo(0,0);
   const {id:_x, ...resto} = cp;
   try{ await setDoc(ref, Object.assign({}, resto, {_writer:sessionId, actualizado:new Date().toISOString()})); toast('Programa duplicado'); }catch(e){ onSaveError(e); }
@@ -782,12 +843,17 @@ function renderEditorPrograma(p){
     <h3>Agregar elementos</h3><p class="hint" style="margin:0;">Toca un elemento para añadirlo al final del programa.</p>
     ${PROG_GRUPOS.map(([g,ks])=>`<div class="grp">${g}</div>${ks.map(k=>`<button type="button" class="prog-add" onclick="progAgregar('${k}')"><b>＋</b>${escapeHtml(PROG_TIPOS[k].n)}</button>`).join('')}`).join('')}
   </aside>`;
-  const acciones = (principal)=>`<div class="actions-row" style="margin-bottom:14px;">
+  const inv = !!state.compMode;
+  const acciones = (principal)=>inv
+    ? `<div class="actions-row" style="margin-bottom:14px;">${principal}
+        <button type="button" class="btn-secondary" onclick="progImprimir('${p.id}')">Imprimir / PDF</button></div>`
+    : `<div class="actions-row" style="margin-bottom:14px;">
       <button type="button" class="btn-secondary" onclick="progVolver()">‹ Mis programas</button>
       ${principal}
       <button type="button" class="btn-secondary" onclick="progImprimir('${p.id}')">Imprimir / PDF</button>
+      <button type="button" class="btn-secondary" onclick="progCompToggle()">${p.compToken?'Compartido · ':''}Compartir</button>
       <button type="button" class="btn-secondary" onclick="progDuplicar('${p.id}')">Duplicar</button>
-      <button type="button" class="btn-secondary" onclick="progEliminar('${p.id}')">Eliminar</button></div>`;
+      <button type="button" class="btn-secondary" onclick="progEliminar('${p.id}')">Eliminar</button></div>${progCompPanelHtml(p)}`;
   if(state.progVista){
     return acciones(`<button type="button" class="btn-primary" onclick="progEditar()">Editar</button>`)+
       `<div class="vista-comp">${construirHtmlPrograma(p).replace('class="print-page prog-doc"','class="prog-doc"')}</div>`;
@@ -934,7 +1000,7 @@ const state = {
   log:[], registry:{},
   anunciosGenerales:[],
   anunciosBarrio:{items:[]},
-  verLogId:null, verAgenda:null, programas:[], progId:null, progPanel:false, progVista:false,
+  verLogId:null, verAgenda:null, progCompOpen:false, compSubs:{}, compSubsBarrio:null, compMode:null, compError:'', programas:[], progId:null, progPanel:false, progVista:false,
   oracionesSacramentales:{pan:'', agua:''},
   catalogoHimnos:{himnarioSUD:[], nuevaColeccion:[]},
   familiasData:{list:[], resetBoundary:null},
@@ -1047,7 +1113,7 @@ async function cargarSesionBarrio(barrioId, nombre){
     const nuevos=[];
     snap.forEach(dc=>{ const x=dc.data(); const local=state.programas.find(q=>q.id===dc.id);
       nuevos.push((x._writer===sessionId && local) ? local : Object.assign({id:dc.id}, x)); });
-    state.programas = nuevos;
+    state.programas = nuevos; sincronizarCompSubs();
     if(state.stage==='app' && state.view==='programas') renderSiNoEscribiendo();
   }, err=>{ console.error('[Programas] Error del listener:', err); }));
   state.unsubs.push(onSnapshot(refDominical(), snap=>{
@@ -1108,6 +1174,7 @@ window.reintentarAcceso = async function(){
 };
 
 const tokenCompartido = new URLSearchParams(location.search).get('v');
+const tokenProg = new URLSearchParams(location.search).get('p');
 async function cargarReunionCompartida(token){
   state.stage='compartida'; render();
   try{
@@ -1122,6 +1189,32 @@ window.imprimirCompartida = function(){
   qs('print-area').innerHTML = construirHtmlImprimible({tipo:c.tipo, fecha:c.fecha, data:c.data});
   setTimeout(()=>window.print(), 80);
 };
+function cargarProgramaCompartido(token){
+  state.stage='progcomp'; state.compMode={token, acceso:null}; state.compError=''; render();
+  onSnapshot(doc(db,'programasCompartidos',token), snap=>{
+    if(!snap.exists()){ state.compError='Este enlace no existe o el programa dejó de compartirse.'; render(); return; }
+    const x = snap.data(); const antes = state.compMode.acceso;
+    state.compMode.acceso = x.acceso; state.barrioNombre = x.barrioNombre||'';
+    const loc = state.programas[0];
+    if(!(x._writer===sessionId && loc)) state.programas = [Object.assign({}, x, {id:'comp'})];
+    state.progId='comp';
+    if(x.acceso==='lector') state.progVista=true; else if(antes===null || antes==='lector') state.progVista=false;
+    if(x.acceso==='lector' || !usuarioEstaEscribiendo()) render();
+  }, err=>{ console.error(err); state.compError='No se pudo abrir el programa compartido.'; render(); });
+}
+function renderProgComp(){
+  if(state.compError) return `<div class="gate-wrap"><div class="gate-card"><h1>Enlace no disponible</h1><p class="hint">${escapeHtml(state.compError)}</p></div></div>`;
+  const p = progActual(); if(!p) return `<div class="gate-wrap"><p class="hint">Cargando programa…</p></div>`;
+  const lector = state.compMode.acceso==='lector';
+  const etiqueta = `<p class="hint" style="text-align:center;margin:0 0 12px;">Acceso de ${lector?'lector (solo lectura)':'editor'} · ${escapeHtml(state.barrioNombre)}</p>`;
+  if(lector || state.progVista){
+    const acc = lector ? `<button type="button" class="btn-primary" onclick="progImprimir('comp')">Imprimir / PDF</button>`
+      : `<button type="button" class="btn-primary" onclick="progEditar()">Editar</button><button type="button" class="btn-secondary" onclick="progImprimir('comp')">Imprimir / PDF</button>`;
+    return `<div style="max-width:760px;margin:0 auto;">${etiqueta}<div class="actions-row" style="margin-bottom:14px;justify-content:center;">${acc}</div>
+      <div class="vista-comp">${construirHtmlPrograma(p).replace('class="print-page prog-doc"','class="prog-doc"')}</div></div>`;
+  }
+  return etiqueta + renderEditorPrograma(p);
+}
 function renderCompartida(){
   const c = state.compartida;
   if(!c) return `<div class="gate-wrap"><p class="hint">Cargando reunión…</p></div>`;
@@ -1155,7 +1248,7 @@ window.dejarDeCompartir = async function(id){
 };
 
 onAuthStateChanged(auth, async (user)=>{
-  if(tokenCompartido) return;
+  if(tokenCompartido || tokenProg) return;
   if(user){ await cargarSesion(user); }
   else { limpiarListeners(); aplicarApariencia({}); state.stage='gate'; state.view='home'; render(); }
 });
@@ -2002,6 +2095,13 @@ function renderNav(){
 /* ============ RENDER MAESTRO ============ */
 function render(){
   document.body.classList.toggle('modo-gate', state.stage==='gate' && state.gateMode!=='crear-admin');
+  document.body.classList.toggle('modo-invitado', state.stage==='progcomp' || state.stage==='compartida');
+  if(state.stage==='progcomp'){
+    qs('spine').innerHTML=''; qs('topbar').innerHTML='';
+    qs('pageInner').innerHTML = renderProgComp();
+    qs('pageInner').querySelectorAll('textarea.auto-grow').forEach(autoGrow);
+    return;
+  }
   if(state.stage==='compartida'){
     qs('spine').innerHTML=''; qs('topbar').innerHTML='';
     qs('pageInner').innerHTML = renderCompartida();
@@ -3077,6 +3177,7 @@ function bindConfigLists(){
   makeSimpleList('config-miembros', ()=>state.config.miembros, 'Nombre completo', saveConfig, 0).render();
 }
 if(tokenCompartido){ cargarReunionCompartida(tokenCompartido); }
+if(tokenProg){ cargarProgramaCompartido(tokenProg); }
 </script>
 </body>
 </html>
