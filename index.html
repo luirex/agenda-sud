@@ -4,6 +4,14 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Agenda Dominical</title>
+<link rel="manifest" href="manifest.webmanifest">
+<meta name="theme-color" content="#152238">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Agenda SUD">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="icon" type="image/png" href="icon-192.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,500;0,600;0,700;1,500&family=Source+Sans+3:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
@@ -112,7 +120,7 @@
   .crest{color:var(--gold-soft);width:34px;height:34px;margin-bottom:8px;}
   .crest svg{width:100%;height:100%;}
   .crest-lg{width:52px;height:52px;margin:0 auto 10px;color:var(--gold);}
-  input[type=text],input[type=date],input[type=time],textarea,select{
+  input[type=text],input[type=date],input[type=time],input[type=number],textarea,select{
     width:100%;padding:9px 12px;border:1px solid var(--line);border-radius:6px;font-family:var(--font-body);
     font-size:14px;color:var(--ink);background:var(--input-bg);margin-bottom:12px;transition:border-color .15s,box-shadow .15s;}
   textarea{resize:vertical;min-height:56px;}
@@ -185,6 +193,56 @@
   .last-line{display:flex;align-items:center;justify-content:flex-end;}
   .list-num{font-family:var(--font-mono);font-size:13px;color:var(--gold);flex-shrink:0;
     width:22px;padding-top:9px;text-align:right;font-weight:500;}
+  /* ---- Programas especiales ---- */
+  .prog-layout{display:grid;grid-template-columns:minmax(0,1fr) 270px;gap:22px;align-items:start;}
+  .prog-side{position:sticky;top:16px;background:var(--card-bg);border:1px solid var(--line);border-radius:14px;padding:16px;
+    box-shadow:0 4px 14px rgba(21,34,56,.08);max-height:calc(100vh - 32px);overflow:auto;}
+  .prog-side h3{font-family:var(--font-display);font-size:16px;margin:0 0 4px;color:var(--heading);}
+  .prog-side .grp{font-family:var(--font-mono);font-size:10px;letter-spacing:2px;text-transform:uppercase;color:var(--gold);margin:14px 0 6px;}
+  .prog-add{display:flex;align-items:center;gap:8px;width:100%;text-align:left;padding:9px 11px;margin-bottom:6px;border:1.5px solid var(--line);
+    border-radius:9px;background:var(--parchment);color:var(--ink);cursor:pointer;font-family:var(--font-body);font-size:14px;}
+  .prog-add b{color:var(--gold);font-size:16px;line-height:1;} .prog-add:hover{border-color:var(--gold);background:var(--parchment-dark);}
+  .prog-item{background:var(--card-bg);border:1px solid var(--line);border-left:4px solid var(--gold);border-radius:10px;padding:12px 14px;margin-bottom:10px;}
+  .prog-item.t-titulo{border-left-color:var(--heading);background:var(--parchment-dark);}
+  .prog-item.t-depie,.prog-item.t-sep{padding:8px 14px;}
+  .prog-head{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:6px;}
+  .prog-tipo{font-family:var(--font-mono);font-size:10.5px;letter-spacing:2px;text-transform:uppercase;color:var(--gold);}
+  .prog-btns{display:flex;gap:4px;} .prog-btns button{background:none;border:1px solid var(--line);border-radius:6px;width:30px;height:28px;cursor:pointer;color:var(--ink-soft);}
+  .prog-btns button:hover{border-color:var(--gold);color:var(--gold);}
+  .prog-item label{margin-top:6px;} .prog-item input,.prog-item textarea{margin-bottom:2px;}
+  .prog-item textarea.prog-rol{min-height:0;font-family:var(--font-mono);font-size:11px;font-weight:400;letter-spacing:2px;text-transform:uppercase;color:var(--gold);
+    background:transparent;border:none;border-bottom:1px dashed var(--line);border-radius:0;padding:4px 0;margin:0;width:min(100%,280px);box-shadow:none;height:auto;}
+  .prog-item textarea.prog-rol:focus{outline:none;border-bottom:1px solid var(--gold);box-shadow:none;background:transparent;}
+  .prog-mas{background:none;border:none;color:var(--gold);font-size:12.5px;cursor:pointer;padding:6px 0 0;font-family:var(--font-body);}
+  .prog-mas:hover{text-decoration:underline;}
+  #prog-sug{display:none;z-index:400;background:var(--card-bg);border:1px solid var(--gold);border-radius:8px;box-shadow:0 10px 26px rgba(0,0,0,.25);max-height:240px;overflow:auto;}
+  .sug-op{padding:9px 12px;font-size:14.5px;cursor:pointer;color:var(--ink);} .sug-op:hover{background:var(--parchment-dark);}
+  .prog-vacio{border:2px dashed var(--line);border-radius:12px;padding:28px;text-align:center;color:var(--ink-soft);}
+  .prog-card{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:14px 16px;margin-bottom:10px;background:var(--card-bg);
+    border:1px solid var(--line);border-radius:12px;cursor:pointer;} .prog-card:hover{border-color:var(--gold);}
+  .prog-btns-txt{flex-wrap:wrap;justify-content:flex-end;} .prog-btns-txt button{width:auto;padding:0 10px;font-size:12.5px;}
+  .prog-fab{display:none;}
+  @media(max-width:900px){
+    .prog-layout{grid-template-columns:1fr;}
+    .prog-side{position:fixed;left:0;right:0;bottom:0;top:auto;z-index:120;border-radius:16px 16px 0 0;max-height:62vh;transform:translateY(105%);transition:transform .25s;}
+    .prog-side.open{transform:none;box-shadow:0 -10px 40px rgba(0,0,0,.35);}
+    .prog-fab{display:flex;position:fixed;right:16px;bottom:18px;z-index:110;padding:14px 20px;border-radius:30px;border:none;background:var(--navy);color:#F3E7C6;
+      font-weight:600;font-size:15px;box-shadow:0 8px 22px rgba(0,0,0,.35);cursor:pointer;}
+  }
+  /* Programas: diseño con aire (pantalla e impresión) */
+  .prog-doc .print-header{margin-bottom:24px;}
+  .prog-doc .print-crest{margin:0 auto 10px;}
+  .prog-doc h1{margin:8px 0 10px !important;line-height:1.2;}
+  .prog-doc .print-sub{margin:0 0 4px;line-height:1.5;}
+  .prog-doc .print-section{margin-bottom:22px;}
+  .prog-doc .print-section h3{margin:0 0 14px;padding-bottom:5px;}
+  .prog-doc .print-row{margin-bottom:12px;line-height:1.5;}
+  .prog-doc .print-row.print-oracion{display:flex;align-items:flex-start;gap:10px;}
+  .prog-doc .print-oracion .print-label{flex:0 0 auto;max-width:45%;}
+  .prog-doc .print-oracion .print-linea{flex:1;min-width:0;border-bottom:1px solid #999;min-height:22px;padding:0 3px 3px;line-height:1.45;overflow-wrap:anywhere;}
+  .prog-doc .print-verse{margin:16px 0 18px;line-height:1.5;}
+  .vista-oraciones{margin:4px 0 8px;} .vo-botones{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:10px;}
+  .vista-comp .oracion-card{margin-top:6px;}
   /* ---- Pantalla de ingreso premium ---- */
   body.modo-gate #spine{display:none;}
   body.modo-gate #page{background:radial-gradient(ellipse at 50% -10%, rgba(201,165,92,.28), transparent 55%),
@@ -353,7 +411,7 @@
     #page{padding:22px 16px 60px;}
     .card-grid,.grid3{grid-template-columns:1fr 1fr;}
     .grid2{grid-template-columns:1fr;}
-    input[type=text],input[type=date],input[type=time],textarea,select{font-size:16px;}
+    input[type=text],input[type=date],input[type=time],input[type=number],textarea,select{font-size:16px;}
     .theme-toggle-btn{top:auto;bottom:16px;}
     .btn-primary,.btn-secondary{min-height:46px;}
   }
@@ -530,6 +588,260 @@ function fieldsetApariencia(){
   </fieldset>`;
 }
 
+
+/* ============ INSTALAR COMO APP (PWA) ============ */
+let promptInstalar = null;
+const yaInstalada = ()=> window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
+window.addEventListener('beforeinstallprompt', e=>{ e.preventDefault(); promptInstalar = e; if(state.stage==='app' && state.view==='config') render(); });
+window.addEventListener('appinstalled', ()=>{ promptInstalar = null; toast('App instalada'); if(state.view==='config') render(); });
+if('serviceWorker' in navigator && location.protocol==='https:'){
+  window.addEventListener('load', ()=>{ navigator.serviceWorker.register('sw.js').catch(err=>console.warn('SW no registrado', err)); });
+}
+window.instalarApp = async function(){
+  if(!promptInstalar){ return; }
+  promptInstalar.prompt();
+  try{ await promptInstalar.userChoice; }catch(e){}
+  promptInstalar = null; render();
+};
+function fieldsetInstalar(){
+  if(yaInstalada()) return `<fieldset><legend>Instalar como app</legend><p class="hint">Ya estás usando la app instalada.</p></fieldset>`;
+  const esIOS = /iphone|ipad|ipod/i.test(navigator.userAgent);
+  const boton = promptInstalar ? `<button type="button" class="btn-primary" onclick="instalarApp()">Instalar en este dispositivo</button>` : '';
+  const pasos = esIOS
+    ? `<p class="hint">En iPhone/iPad: abre esta página en <b>Safari</b>, pulsa el botón <b>Compartir</b> (cuadro con flecha hacia arriba) y elige <b>"Agregar a pantalla de inicio"</b>.</p>`
+    : `<p class="hint">${promptInstalar ? '' : 'En Android (Chrome): abre el menú ⋮ y elige <b>"Instalar app"</b> o <b>"Agregar a pantalla de inicio"</b>. '}Una vez instalada, se abre en pantalla completa, como cualquier otra app.</p>`;
+  return `<fieldset><legend>Instalar como app</legend>
+    <p class="hint">Agrega la agenda a la pantalla de inicio de tu celular o tablet para abrirla con un solo toque.</p>${boton}${pasos}</fieldset>`;
+}
+
+
+/* ============ PROGRAMAS ESPECIALES (agenda libre con barra de elementos) ============ */
+function colProgramas(){ return collection(db,'barrios',state.barrioId,'programas'); }
+const PROG_TIPOS = {
+  titulo:{n:'Título de sección', f:[['texto','Título de la sección','i']]},
+  oracion:{n:'Oración', f:[['rol','','r'],['nombre','Nombre','p']], d:{rol:'Oración'}},
+  himno:{n:'Himno', f:[['rol','','r'],['num','Número o título del himno','h']], d:{rol:'Himno'}},
+  discursante:{n:'Discursante', f:[['nombre','Nombre','p'],['tema','Tema','a','x'],['tiempo','Minutos','i','x']]},
+  mensaje:{n:'Mensaje / participación', f:[['rol','','r'],['nombre','Nombre','p'],['detalle','Detalle','a','x']], d:{rol:'Mensaje'}},
+  musical:{n:'Número musical', f:[['nombre','Intérprete(s)','p'],['detalle','Obra o himno','i','x']]},
+  testimonio:{n:'Testimonio', f:[['nombre','Nombre','p']]},
+  escritura:{n:'Escritura / lectura', f:[['ref','Referencia','i'],['texto','Texto (opcional)','a','x']]},
+  frase:{n:'Frase o cita', f:[['texto','Frase','a'],['autor','Autor (opcional)','i','x']]},
+  actividad:{n:'Actividad', f:[['nombre','Actividad','i'],['responsable','Responsable','p'],['detalle','Detalle','a','x']]},
+  nota:{n:'Nota / texto libre', f:[['texto','Texto','a']]},
+  depie:{n:'Pónganse de pie', f:[]},
+  sep:{n:'Línea separadora', f:[]}
+};
+const PROG_GRUPOS = [
+  ['Participantes',['oracion','discursante','mensaje','testimonio','musical']],
+  ['Música',['himno']],
+  ['Contenido',['escritura','frase','actividad','nota']],
+  ['Estructura',['titulo','depie','sep']]
+];
+const PROG_PLANTILLAS = {
+  bautismo:{n:'Servicio bautismal', items:[['himno',{rol:'Himno inicial'}],['oracion',{rol:'Oración inicial'}],['mensaje',{rol:'Bienvenida'}],['discursante',{tiempo:'5'}],['musical',{}],['mensaje',{rol:'Ordenanza del bautismo'}],['testimonio',{}],['himno',{rol:'Himno final'}],['oracion',{rol:'Oración final'}]]},
+  primaria:{n:'Programa de Primaria', items:[['himno',{rol:'Himno inicial'}],['oracion',{rol:'Oración inicial'}],['mensaje',{rol:'Bienvenida'}],['titulo',{texto:'Participación de los niños'}],['actividad',{}],['escritura',{}],['actividad',{}],['frase',{}],['testimonio',{}],['mensaje',{rol:'Palabras de la presidencia de la Primaria'}],['himno',{rol:'Himno final'}],['oracion',{rol:'Oración final'}]]},
+  jovenes:{n:'Jóvenes (Hombres / Mujeres Jóvenes)', items:[['himno',{rol:'Himno inicial'}],['oracion',{rol:'Oración inicial'}],['mensaje',{rol:'Bienvenida'}],['escritura',{}],['discursante',{}],['musical',{}],['actividad',{}],['testimonio',{}],['himno',{rol:'Himno final'}],['oracion',{rol:'Oración final'}]]},
+  blanco:{n:'En blanco', items:[]}
+};
+function progId8(){ return 'i'+Math.random().toString(36).slice(2,9); }
+function progNuevoItem(tipo, extra){ return {id:progId8(), t:tipo, v:Object.assign({}, (PROG_TIPOS[tipo]||{}).d||{}, extra||{})}; }
+const guardarPrograma = debounce(()=>{
+  const pr = state.programas.find(x=>x.id===state.progId); if(!pr) return;
+  const {id, ...resto} = pr;
+  setDoc(doc(db,'barrios',state.barrioId,'programas',id), Object.assign({}, resto, {_writer:sessionId, actualizado:new Date().toISOString()})).catch(onSaveError);
+}, 500);
+function guardarProgramaYa(){
+  const pr = state.programas.find(x=>x.id===state.progId); if(!pr) return Promise.resolve();
+  const {id, ...resto} = pr;
+  return setDoc(doc(db,'barrios',state.barrioId,'programas',id), Object.assign({}, resto, {_writer:sessionId, actualizado:new Date().toISOString()})).catch(onSaveError);
+}
+window.progVer = async function(){ await guardarProgramaYa(); state.progVista=true; state.progPanel=false; render(); window.scrollTo(0,0); toast('Programa guardado'); };
+window.progEditar = function(){ state.progVista=false; render(); window.scrollTo(0,0); };
+function progActual(){ return state.programas.find(x=>x.id===state.progId); }
+
+window.progCrear = async function(){
+  const tipo = qs('prog-nuevo-tipo').value;
+  const titulo = qs('prog-nuevo-titulo').value.trim() || PROG_PLANTILLAS[tipo].n;
+  const ref = doc(colProgramas());
+  const pr = {id:ref.id, tipo, titulo, fecha:'', hora:'', lugar:'', items:PROG_PLANTILLAS[tipo].items.map(([t,v])=>progNuevoItem(t,v))};
+  state.programas.push(pr); state.progId = pr.id; state.progVista=false; render(); window.scrollTo(0,0);
+  const {id, ...resto} = pr;
+  try{ await setDoc(ref, Object.assign({}, resto, {_writer:sessionId, actualizado:new Date().toISOString()})); }catch(e){ onSaveError(e); }
+};
+window.progAbrir = (id, vista)=>{ state.progId=id; state.progVista=!!vista; state.progPanel=false; render(); window.scrollTo(0,0); };
+window.progVolver = ()=>{ state.progId=null; state.progVista=false; state.progPanel=false; render(); };
+window.progCampoGeneral = (k,v)=>{ const pr=progActual(); if(!pr) return; pr[k]=v; guardarPrograma(); };
+window.progCampo = (iid,k,v)=>{ const pr=progActual(); const it=pr&&pr.items.find(x=>x.id===iid); if(!it) return; it.v[k]=v; guardarPrograma(); };
+window.progAgregar = (tipo)=>{
+  const pr=progActual(); if(!pr) return;
+  const it = progNuevoItem(tipo); pr.items.push(it); guardarPrograma(); state.progPanel=false; render();
+  const el = document.getElementById('pi-'+it.id);
+  if(el){ el.scrollIntoView({behavior:'smooth',block:'center'}); const inp=el.querySelector('input,textarea'); if(inp) setTimeout(()=>inp.focus(),250); }
+};
+window.progMover = (iid,d)=>{ const pr=progActual(); if(!pr) return; const i=pr.items.findIndex(x=>x.id===iid), j=i+d; if(i<0||j<0||j>=pr.items.length) return;
+  [pr.items[i],pr.items[j]]=[pr.items[j],pr.items[i]]; guardarPrograma(); render();
+  const el=document.getElementById('pi-'+iid); if(el) el.scrollIntoView({block:'nearest'}); };
+window.progQuitar = (iid)=>{ const pr=progActual(); if(!pr) return; pr.items=pr.items.filter(x=>x.id!==iid); guardarPrograma(); render(); };
+window.progPanelToggle = ()=>{ state.progPanel=!state.progPanel; const e=qs('prog-side'); if(e) e.classList.toggle('open', state.progPanel); };
+window.progEliminar = async function(id){
+  if(!confirm('¿Eliminar este programa? No se puede deshacer.')) return;
+  try{ await deleteDoc(doc(db,'barrios',state.barrioId,'programas',id)); state.programas=state.programas.filter(x=>x.id!==id); if(state.progId===id){ state.progId=null; state.progVista=false; } render(); toast('Programa eliminado'); }
+  catch(e){ alert('No se pudo eliminar: '+(e.message||e)); }
+};
+window.progDuplicar = async function(id){
+  const o = state.programas.find(x=>x.id===id); if(!o) return;
+  const ref = doc(colProgramas());
+  const cp = JSON.parse(JSON.stringify(o)); cp.id=ref.id; cp.titulo=(o.titulo||'Programa')+' (copia)'; cp.fecha=''; cp.items.forEach(i=>i.id=progId8());
+  state.programas.push(cp); state.progId=cp.id; state.progVista=false; render(); window.scrollTo(0,0);
+  const {id:_x, ...resto} = cp;
+  try{ await setDoc(ref, Object.assign({}, resto, {_writer:sessionId, actualizado:new Date().toISOString()})); toast('Programa duplicado'); }catch(e){ onSaveError(e); }
+};
+window.progImprimir = function(id){
+  const pr = state.programas.find(x=>x.id===id); if(!pr) return;
+  qs('print-area').innerHTML = construirHtmlPrograma(pr);
+  setTimeout(()=>window.print(), 80);
+};
+
+const PROG_ENTER = "if(event.key==='Enter'){event.preventDefault();this.blur();}";
+function progAreaHtml(valor, lista, oninput, extraClase){
+  const l = lista ? ` data-lista="${lista}" onfocus="progSug(this)" onblur="progSugOcultar()"` : '';
+  return `<textarea rows="1" class="auto-grow ${extraClase||''}"${l} onkeydown="${PROG_ENTER}" oninput="autoGrow(this);${oninput}${lista?';progSug(this)':''}">${escapeHtml(valor||'')}</textarea>`;
+}
+function progCampoHtml(it, [k,label,kind]){
+  const oi = `progCampo('${it.id}','${k}',this.value)`;
+  if(kind==='a') return `<label>${label}</label><textarea rows="1" class="auto-grow" oninput="autoGrow(this);${oi}">${escapeHtml(it.v[k]||'')}</textarea>`;
+  return `<label>${label}</label>${progAreaHtml(it.v[k], kind==='p'?'p':kind==='h'?'h':'', oi)}`;
+}
+window.progSug = function(el){
+  const lista = el.dataset.lista; let box = document.getElementById('prog-sug');
+  if(!lista){ return; }
+  if(!box){ box=document.createElement('div'); box.id='prog-sug'; document.body.appendChild(box); window.addEventListener('scroll',()=>progSugOcultar(),true); }
+  const norm = t=>(t||'').toString().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');
+  const q = norm(el.value);
+  const ops = [...document.querySelectorAll('#'+(lista==='h'?'himnos-datalist':'discursantes-datalist')+' option')].map(o=>o.value)
+    .filter(v=>v && norm(v)!==q && (!q || norm(v).includes(q))).slice(0,8);
+  if(!ops.length){ box.style.display='none'; return; }
+  const r = el.getBoundingClientRect();
+  box.style.cssText = `display:block;position:fixed;left:${r.left}px;top:${r.bottom+2}px;width:${r.width}px;`;
+  box.innerHTML = ops.map(v=>`<div class="sug-op" data-v="${escapeAttr(v)}">${escapeHtml(v)}</div>`).join('');
+  box.onmousedown = box.ontouchstart = (e)=>{
+    const op = e.target.closest('.sug-op'); if(!op) return; e.preventDefault();
+    el.value = op.dataset.v; autoGrow(el); el.dispatchEvent(new Event('input',{bubbles:true})); box.style.display='none'; el.blur();
+  };
+};
+window.progSugOcultar = function(){ setTimeout(()=>{ const b=document.getElementById('prog-sug'); if(b) b.style.display='none'; }, 120); };
+window.progExtras = (iid)=>{ const pr=progActual(); const it=pr&&pr.items.find(x=>x.id===iid); if(!it) return; it.abierto=true; render();
+  const el=document.getElementById('pi-'+iid); const t=el&&el.querySelector('.prog-extra input,.prog-extra textarea'); if(t) t.focus(); };
+function progItemHtml(it, i, total){
+  const T = PROG_TIPOS[it.t]; if(!T) return '';
+  const tieneRol = T.f.some(f=>f[2]==='r');
+  const principales = T.f.filter(f=>f[2]!=='r' && f[3]!=='x');
+  const extras = T.f.filter(f=>f[3]==='x');
+  const extrasVisibles = it.abierto || extras.some(f=>(it.v[f[0]]||'').trim());
+  const titulo = tieneRol
+    ? `<textarea rows="1" class="auto-grow prog-rol" placeholder="${escapeAttr(T.n)}" aria-label="Momento" onkeydown="${PROG_ENTER}" oninput="autoGrow(this);progCampo('${it.id}','rol',this.value)">${escapeHtml(it.v.rol||'')}</textarea>`
+    : `<span class="prog-tipo">${escapeHtml(T.n)}</span>`;
+  return `<div class="prog-item t-${it.t}" id="pi-${it.id}">
+    <div class="prog-head">${titulo}
+      <div class="prog-btns">
+        <button type="button" title="Subir" ${i===0?'disabled':''} onclick="progMover('${it.id}',-1)">▲</button>
+        <button type="button" title="Bajar" ${i===total-1?'disabled':''} onclick="progMover('${it.id}',1)">▼</button>
+        <button type="button" title="Quitar" onclick="progQuitar('${it.id}')">✕</button>
+      </div></div>
+    ${principales.map(f=>progCampoHtml(it,f)).join('')}
+    ${extras.length ? (extrasVisibles ? `<div class="prog-extra">${extras.map(f=>progCampoHtml(it,f)).join('')}</div>`
+      : `<button type="button" class="prog-mas" onclick="progExtras('${it.id}')">＋ Más detalles</button>`) : ''}
+  </div>`;
+}
+function renderListaProgramas(){
+  const lista = state.programas.slice().sort((a,b)=> (b.fecha||'').localeCompare(a.fecha||'') || (b.actualizado||'').localeCompare(a.actualizado||''));
+  return `<h2 class="section-title">Programas especiales</h2>
+  <p class="verse">Crea la agenda de un bautismo, un programa de Primaria, una actividad de jóvenes o cualquier otra reunión, eligiendo los elementos que necesites.</p>
+  <fieldset><legend>Nuevo programa</legend>
+    <div class="grid2"><div><label>Tipo</label><select id="prog-nuevo-tipo">${Object.entries(PROG_PLANTILLAS).map(([k,v])=>`<option value="${k}">${escapeHtml(v.n)}</option>`).join('')}</select></div>
+    <div><label>Título (opcional)</label><input type="text" id="prog-nuevo-titulo" placeholder="Ej. Bautismo de María López"></div></div>
+    <button type="button" class="btn-primary" style="display:block;margin:14px 0 18px;" onclick="progCrear()">Crear programa</button>
+    <p class="hint" style="margin-top:0;clear:both;">Cada tipo trae una estructura inicial que puedes cambiar libremente.</p>
+  </fieldset>
+  <h3 style="font-family:var(--font-display);margin:22px 0 10px;">Mis programas</h3>
+  ${lista.length ? lista.map(p=>`<div class="prog-card" onclick="progAbrir('${p.id}',true)">
+      <div><div style="font-weight:600;">${escapeHtml(p.titulo||'Sin título')}</div>
+      <div class="hint" style="margin:2px 0 0;">${escapeHtml((PROG_PLANTILLAS[p.tipo]||{}).n||'')}${p.fecha?' · '+fmtFecha(p.fecha):''} · ${(p.items||[]).length} elementos</div></div>
+      <div class="prog-btns prog-btns-txt" onclick="event.stopPropagation()">
+        <button type="button" onclick="progAbrir('${p.id}',true)">Ver</button>
+        <button type="button" onclick="progAbrir('${p.id}',false)">Editar</button>
+        <button type="button" onclick="progImprimir('${p.id}')">PDF</button>
+        <button type="button" onclick="progDuplicar('${p.id}')">Duplicar</button>
+        <button type="button" title="Eliminar" onclick="progEliminar('${p.id}')">Eliminar</button></div>
+    </div>`).join('') : `<div class="prog-vacio">Aún no has creado programas.</div>`}`;
+}
+function renderEditorPrograma(p){
+  p.items = p.items || [];
+  const side = `<aside class="prog-side ${state.progPanel?'open':''}" id="prog-side">
+    <h3>Agregar elementos</h3><p class="hint" style="margin:0;">Toca un elemento para añadirlo al final del programa.</p>
+    ${PROG_GRUPOS.map(([g,ks])=>`<div class="grp">${g}</div>${ks.map(k=>`<button type="button" class="prog-add" onclick="progAgregar('${k}')"><b>＋</b>${escapeHtml(PROG_TIPOS[k].n)}</button>`).join('')}`).join('')}
+  </aside>`;
+  const acciones = (principal)=>`<div class="actions-row" style="margin-bottom:14px;">
+      <button type="button" class="btn-secondary" onclick="progVolver()">‹ Mis programas</button>
+      ${principal}
+      <button type="button" class="btn-secondary" onclick="progImprimir('${p.id}')">Imprimir / PDF</button>
+      <button type="button" class="btn-secondary" onclick="progDuplicar('${p.id}')">Duplicar</button>
+      <button type="button" class="btn-secondary" onclick="progEliminar('${p.id}')">Eliminar</button></div>`;
+  if(state.progVista){
+    return acciones(`<button type="button" class="btn-primary" onclick="progEditar()">Editar</button>`)+
+      `<div class="vista-comp">${construirHtmlPrograma(p).replace('class="print-page prog-doc"','class="prog-doc"')}</div>`;
+  }
+  return acciones(`<button type="button" class="btn-primary" onclick="progVer()">Guardar y ver</button>`)+`
+    <div class="prog-layout"><div>
+      <fieldset><legend>${escapeHtml((PROG_PLANTILLAS[p.tipo]||{}).n||'Programa')}</legend>
+        <label>Título</label>${progAreaHtml(p.titulo,'',"progCampoGeneral('titulo',this.value)")}
+        <div class="grid3"><div><label>Fecha</label><input type="date" value="${escapeAttr(p.fecha)}" onchange="progCampoGeneral('fecha',this.value)"></div>
+          <div><label>Hora</label><input type="time" value="${escapeAttr(p.hora)}" onchange="progCampoGeneral('hora',this.value)"></div>
+          <div><label>Lugar</label><textarea rows="1" class="auto-grow" placeholder="Capilla, salón…" onkeydown="${PROG_ENTER}" oninput="autoGrow(this);progCampoGeneral('lugar',this.value)">${escapeHtml(p.lugar||'')}</textarea></div></div>
+      </fieldset>
+      ${p.items.length ? p.items.map((it,i)=>progItemHtml(it,i,p.items.length)).join('') : `<div class="prog-vacio">Programa vacío. Elige elementos en la barra de la derecha.</div>`}
+    </div>${side}</div>
+    <button type="button" class="prog-fab" onclick="progPanelToggle()">＋ Agregar</button>`;
+}
+function renderProgramas(){
+  const p = state.progId && progActual();
+  if(!p){ state.progId=null; return renderListaProgramas(); }
+  return renderEditorPrograma(p);
+}
+function construirHtmlPrograma(p){
+  const br = s=>escapeHtml(s||'').replace(/\n/g,'<br>');
+  const meta = [p.fecha?fmtFecha(p.fecha):'', p.hora, p.lugar].filter(Boolean).map(escapeHtml).join(' · ');
+  let html = `<div class="print-page prog-doc"><div class="print-header"><div class="print-crest">${CREST_SVG}</div>
+    <p class="print-sub">${escapeHtml(state.barrioNombre)}</p><h1>${escapeHtml(p.titulo||'Programa')}</h1>
+    ${meta?`<p class="print-sub" style="text-transform:none;letter-spacing:0;">${meta}</p>`:''}</div>`;
+  let titulo=null, filas=[];
+  const volcar = ()=>{ const f=filas.join(''); if(f) html += `<div class="print-section">${titulo?`<h3>${escapeHtml(titulo)}</h3>`:''}${f}</div>`; filas=[]; };
+  (p.items||[]).forEach(it=>{
+    const v=it.v||{};
+    switch(it.t){
+      case 'titulo': volcar(); titulo=v.texto||''; break;
+      case 'oracion': filas.push(filaOracionImprimible(v.rol||'Oración', v.nombre)); break;
+      case 'himno': filas.push(filaOracionImprimible((v.rol||'Himno')+' No.', v.num)); break;
+      case 'discursante': filas.push(filaOracionImprimible('Discursante', v.nombre));
+        if(v.tema) filas.push(filaImprimible('Tema', v.tema + (v.tiempo?` (${v.tiempo} min)`:'')));
+        else if(v.tiempo) filas.push(filaImprimible('Tiempo', v.tiempo+' min')); break;
+      case 'mensaje': filas.push(filaOracionImprimible(v.rol||'Mensaje', v.nombre)); filas.push(filaImprimible('Detalle', v.detalle)); break;
+      case 'musical': filas.push(filaOracionImprimible('Número musical', v.nombre)); filas.push(filaImprimible('Obra', v.detalle)); break;
+      case 'testimonio': filas.push(filaOracionImprimible('Testimonio', v.nombre)); break;
+      case 'escritura': filas.push(filaImprimible('Escritura', [v.ref, v.texto].filter(Boolean).join(' — '))); break;
+      case 'frase': if(v.texto) filas.push(`<p class="print-verse">“${br(v.texto)}”${v.autor?' — '+escapeHtml(v.autor):''}</p>`); break;
+      case 'actividad': filas.push(filaOracionImprimible(v.nombre||'Actividad', v.responsable)); filas.push(filaImprimible('Detalle', v.detalle)); break;
+      case 'nota': if(v.texto) filas.push(`<div class="print-row">${br(v.texto)}</div>`); break;
+      case 'depie': filas.push(`<div class="print-row" style="text-align:center;font-style:italic;">Pónganse de pie</div>`); break;
+      case 'sep': filas.push(`<hr style="border:0;border-top:1px solid #C9A55C;margin:10px 0;">`); break;
+    }
+  });
+  volcar();
+  html += `<p class="print-footer">Impreso desde Agenda Dominical — ${new Date().toLocaleDateString('es-ES')}</p></div>`;
+  return html;
+}
+
 /* ============ TEMA (claro/oscuro) — preferencia local del dispositivo ============ */
 function initTheme(){
   const saved = localStorage.getItem('preferencia-tema') || 'light';
@@ -622,6 +934,7 @@ const state = {
   log:[], registry:{},
   anunciosGenerales:[],
   anunciosBarrio:{items:[]},
+  verLogId:null, verAgenda:null, programas:[], progId:null, progPanel:false, progVista:false,
   oracionesSacramentales:{pan:'', agua:''},
   catalogoHimnos:{himnarioSUD:[], nuevaColeccion:[]},
   familiasData:{list:[], resetBoundary:null},
@@ -730,6 +1043,13 @@ async function cargarSesionBarrio(barrioId, nombre){
     state.oracionesSacramentales = Object.assign({pan:'',agua:''}, snap.exists()? snap.data() : {});
     if(state.stage==='app' && (state.view==='dominical' || state.view==='ayuno')) render();
   }));
+  state.unsubs.push(onSnapshot(colProgramas(), snap=>{
+    const nuevos=[];
+    snap.forEach(dc=>{ const x=dc.data(); const local=state.programas.find(q=>q.id===dc.id);
+      nuevos.push((x._writer===sessionId && local) ? local : Object.assign({id:dc.id}, x)); });
+    state.programas = nuevos;
+    if(state.stage==='app' && state.view==='programas') renderSiNoEscribiendo();
+  }, err=>{ console.error('[Programas] Error del listener:', err); }));
   state.unsubs.push(onSnapshot(refDominical(), snap=>{
     if(!snap.exists()) return;
     const remoto = snap.data();
@@ -1655,6 +1975,7 @@ const NAV_ICONS = {
   ayuno: `<path d="M12 3c2 4-3 5-3 9a3 3 0 006 0c0-2-1-3-1-5 2 1 3 3 3 5a5 5 0 01-10 0c0-5 4-6 5-9z" stroke="currentColor" stroke-width="1.4" fill="none" stroke-linejoin="round"/>`,
   discursantes: `<rect x="9" y="3" width="6" height="10" rx="3" stroke="currentColor" stroke-width="1.4" fill="none"/><path d="M6 11a6 6 0 0012 0M12 17v3M9 20h6" stroke="currentColor" stroke-width="1.4" fill="none" stroke-linecap="round"/>`,
   reuniones: `<rect x="4" y="7" width="16" height="12" rx="1.5" stroke="currentColor" stroke-width="1.4" fill="none"/><path d="M4 7l2-3h12l2 3M10 12h4" stroke="currentColor" stroke-width="1.4" fill="none" stroke-linecap="round"/>`,
+  programas: `<rect x="5" y="3.5" width="14" height="17" rx="2" stroke="currentColor" stroke-width="1.4" fill="none"/><path d="M8.5 8h7M8.5 12h7M8.5 16h4" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/>`,
   config: `<circle cx="12" cy="12" r="3" stroke="currentColor" stroke-width="1.4" fill="none"/><path d="M12 2v3M12 19v3M4.2 4.2l2.1 2.1M17.7 17.7l2.1 2.1M2 12h3M19 12h3M4.2 19.8l2.1-2.1M17.7 6.3l2.1-2.1" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/>`
 };
 const NAV_ITEMS = [
@@ -1663,17 +1984,18 @@ const NAV_ITEMS = [
   {id:'ayuno', label:'Reunión de Ayuno y Testimonio'},
   {id:'discursantes', label:'Bitácora de Discursantes'},
   {id:'reuniones', label:'Bitácora de Reuniones'},
+  {id:'programas', label:'Programas especiales'},
   {id:'config', label:'Configuración'}
 ];
 function tabIcon(id){ return `<svg class="tab-icon" viewBox="0 0 24 24" fill="none">${NAV_ICONS[id]||''}</svg>`; }
-window.goTo = function(view){ state.view=view; render(); window.scrollTo(0,0); };
+window.goTo = function(view){ state.view=view; state.verLogId=null; state.verAgenda=null; render(); window.scrollTo(0,0); };
 function renderNav(){
   const spine = NAV_ITEMS.map(it=>`<button type="button" class="tab ${state.view===it.id?'active':''}" onclick="goTo('${it.id}')">${tabIcon(it.id)}<span>${it.label}</span></button>`).join('');
   let extra = `<button type="button" class="tab" onclick="cerrarSesion()">🚪 Cerrar sesión</button>`;
   if(state.isAdmin) extra = `<button type="button" class="tab" onclick="state.stage='admin';render();">🛠 Panel admin</button>` + extra;
   qs('spine').innerHTML = `<div class="brand"><div class="crest">${CREST_SVG}</div><h1>Agenda Dominical</h1><p>${escapeHtml(state.barrioNombre)||'Agenda dominical del barrio'}</p></div>${spine}
     <div style="margin-top:auto;">${extra}</div>
-    <div class="footer-note">"La reverencia invita a la revelación."<br>— Élder Boyd K. Packer<br><span style="opacity:.6">Versión 21-oct (compartir)</span></div>`;
+    <div class="footer-note">"La reverencia invita a la revelación."<br>— Élder Boyd K. Packer<br><span style="opacity:.6">Versión 14-nov (programas)</span></div>`;
   qs('topbar').innerHTML = spine + extra;
 }
 
@@ -1720,11 +2042,12 @@ function render(){
   renderNav();
   const el = qs('pageInner');
   if(state.view==='home') el.innerHTML = renderHome();
-  else if(state.view==='dominical') el.innerHTML = renderDominical();
-  else if(state.view==='ayuno') el.innerHTML = renderAyuno();
+  else if(state.view==='dominical') el.innerHTML = state.verAgenda==='dominical' ? renderVistaAgenda('dominical') : renderDominical();
+  else if(state.view==='ayuno') el.innerHTML = state.verAgenda==='ayuno' ? renderVistaAgenda('ayuno') : renderAyuno();
   else if(state.view==='discursantes') el.innerHTML = renderDiscursantes();
   else if(state.view==='reuniones') el.innerHTML = renderReuniones();
   else if(state.view==='config') el.innerHTML = renderConfig();
+  else if(state.view==='programas') el.innerHTML = renderProgramas();
 
   const nombresRegistro = Object.values(state.registry).map(r=>r.nombre);
   const nombresTodos = Array.from(new Set([...nombresRegistro, ...(state.config.miembros||[])]));
@@ -1735,8 +2058,8 @@ function render(){
   actualizarDatalistHimnos();
 
   if(state.view==='home') bindHomeLists();
-  if(state.view==='dominical') bindMeetingLists('dom', state.dominical, 'dominical', saveDominical);
-  if(state.view==='ayuno') bindMeetingLists('ayuno', state.ayuno, 'ayuno', saveAyuno);
+  if(state.view==='dominical' && state.verAgenda!=='dominical') bindMeetingLists('dom', state.dominical, 'dominical', saveDominical);
+  if(state.view==='ayuno' && state.verAgenda!=='ayuno') bindMeetingLists('ayuno', state.ayuno, 'ayuno', saveAyuno);
   if(state.view==='reuniones') bindOpenLogLists();
   if(state.view==='config') bindConfigLists();
 
@@ -2111,7 +2434,8 @@ function renderDominical(){
   </div>
   ${fieldsetsDominical('dom', state.dominical, saveDominical)}
   <div class="actions-row">
-    <button type="button" class="btn-primary" onclick="finalizarDominical()">Finalizar y archivar reunión</button>
+    <button type="button" class="btn-primary" onclick="verAgenda('dominical')">Guardar y ver</button>
+    <button type="button" class="btn-secondary" onclick="finalizarDominical()">Finalizar y archivar reunión</button>
     <button type="button" class="btn-secondary" onclick="if(confirm('¿Limpiar el borrador actual sin archivar?')){state.dominical=defaultDominical();state.dominical.barrioRama=state.barrioNombre;saveDominical();render();}">Limpiar borrador</button>
     <span class="save-status">Se guarda automáticamente — puedes editar en cualquier momento</span>
   </div>`;
@@ -2228,7 +2552,8 @@ function renderAyuno(){
   </div>
   ${fieldsetsAyuno('ayuno', state.ayuno, saveAyuno)}
   <div class="actions-row">
-    <button type="button" class="btn-primary" onclick="finalizarAyuno()">Finalizar y archivar reunión</button>
+    <button type="button" class="btn-primary" onclick="verAgenda('ayuno')">Guardar y ver</button>
+    <button type="button" class="btn-secondary" onclick="finalizarAyuno()">Finalizar y archivar reunión</button>
     <button type="button" class="btn-secondary" onclick="if(confirm('¿Limpiar el borrador actual sin archivar?')){state.ayuno=defaultAyuno();state.ayuno.barrio=state.barrioNombre;saveAyuno();render();}">Limpiar borrador</button>
     <span class="save-status">Se guarda automáticamente — puedes editar en cualquier momento</span>
   </div>`;
@@ -2508,7 +2833,7 @@ function seccionImprimible(titulo, filasHtml){
   if(!filas) return '';
   return `<div class="print-section"><h3>${escapeHtml(titulo)}</h3>${filas}</div>`;
 }
-function construirHtmlImprimible(entry){
+function construirHtmlImprimible(entry, opts){
   const d = entry.data;
   const esDominical = entry.tipo === 'Reunión Sacramental Dominical';
   let html = `<div class="print-page">
@@ -2538,7 +2863,11 @@ function construirHtmlImprimible(entry){
 
   html += seccionImprimible('Santa Cena', [
     filaImprimible('Himno sacramental', d.himnoSacramental),
-    filaImprimible('Bendición y reparto', d.santaCenaFrase)
+    filaImprimible('Bendición y reparto', d.santaCenaFrase),
+    (opts && opts.oraciones) ? `<div class="vista-oraciones"><div class="vo-botones">
+      <button type="button" class="btn-secondary" onclick="toggleOracion('pan')">Oración del pan</button>
+      <button type="button" class="btn-secondary" onclick="toggleOracion('agua')">Oración del agua</button></div>
+      ${bloqueOracionSanta('pan')}${bloqueOracionSanta('agua')}</div>` : ''
   ]);
 
   if(esDominical){
@@ -2577,6 +2906,33 @@ function construirHtmlImprimible(entry){
   html += `<p class="print-footer">Impreso desde Agenda Dominical — ${new Date().toLocaleDateString('es-ES')}</p></div>`;
   return html;
 }
+window.verReunion = (id)=>{ state.verLogId=id; render(); window.scrollTo(0,0); };
+window.cerrarVerReunion = ()=>{ state.verLogId=null; render(); };
+window.editarDesdeVista = (id)=>{ state.openLogIds.add(id); state.verLogId=null; render(); window.scrollTo(0,0); };
+window.verAgenda = (tipo)=>{ state.verAgenda=tipo; render(); window.scrollTo(0,0); toast('Borrador guardado'); };
+window.editarAgendaVista = ()=>{ state.verAgenda=null; render(); window.scrollTo(0,0); };
+window.imprimirBorrador = (tipo)=>{ qs('print-area').innerHTML = construirHtmlImprimible(entradaBorrador(tipo)); setTimeout(()=>window.print(), 80); };
+function entradaBorrador(tipo){
+  const d = tipo==='dominical' ? state.dominical : state.ayuno;
+  return {tipo: tipo==='dominical' ? 'Reunión Sacramental Dominical' : 'Reunión de Ayuno y Testimonio', fecha:d.fecha,
+    data:Object.assign({}, JSON.parse(JSON.stringify(d)), {familiasNoAsistieron:[...state.familiasData.list], anuncios:JSON.parse(JSON.stringify(state.anunciosBarrio.items||[]))})};
+}
+function renderVistaAgenda(tipo){
+  return `<div class="actions-row" style="margin-bottom:14px;">
+    <button type="button" class="btn-primary" onclick="editarAgendaVista()">Editar</button>
+    <button type="button" class="btn-secondary" onclick="imprimirBorrador('${tipo}')">Imprimir / PDF</button>
+    <button type="button" class="btn-secondary" onclick="${tipo==='dominical'?'finalizarDominical()':'finalizarAyuno()'}">Finalizar y archivar reunión</button></div>
+    <div class="vista-comp">${construirHtmlImprimible(entradaBorrador(tipo),{oraciones:true}).replace('class="print-page"','')}</div>`;
+}
+function renderVistaReunion(entry){
+  return `<div class="actions-row" style="margin-bottom:14px;">
+    <button type="button" class="btn-secondary" onclick="cerrarVerReunion()">‹ Bitácora de reuniones</button>
+    <button type="button" class="btn-primary" onclick="editarDesdeVista('${entry.id}')">Editar</button>
+    <button type="button" class="btn-secondary" onclick="imprimirReunion('${entry.id}')">Imprimir / PDF</button>
+    <button type="button" class="btn-secondary" onclick="compartirReunion('${entry.id}')">Compartir</button>
+    <button type="button" class="btn-secondary" onclick="eliminarLog('${entry.id}');state.verLogId=null;">Eliminar</button></div>
+    <div class="vista-comp">${construirHtmlImprimible(entry,{oraciones:true}).replace('class="print-page"','')}</div>`;
+}
 window.imprimirReunion = function(id){
   const entry = state.log.find(e=>e.id===id);
   if(!entry) return;
@@ -2596,6 +2952,7 @@ window.guardarLogAhora = async function(id){
   catch(e){ alert('No se pudo guardar: '+(e.message||e)); }
 };
 function renderReuniones(){
+  if(state.verLogId){ const ve = state.log.find(e=>e.id===state.verLogId); if(ve) return renderVistaReunion(ve); state.verLogId=null; }
   if(!state.log.length){
     return `<h2 class="section-title">Bitácora de Reuniones</h2>
     <p class="verse">Archivo de todas las reuniones ya realizadas.</p>
@@ -2621,6 +2978,7 @@ function renderReuniones(){
       <div class="log-head" onclick="toggleLog('${entry.id}')">
         <div><div class="tipo">${escapeHtml(entry.tipo)}</div><div class="fecha">${fmtFecha(entry.fecha)}</div></div>
         <div style="display:flex;align-items:center;gap:10px;">
+          <button type="button" class="btn-primary no-lock" style="padding:6px 12px;font-size:12px;" onclick="event.stopPropagation();verReunion('${entry.id}')">Ver</button>
           <button type="button" class="btn-secondary no-lock" style="padding:6px 12px;font-size:12px;" onclick="event.stopPropagation();imprimirReunion('${entry.id}')">🖨️ Imprimir / PDF</button>
           <button type="button" class="btn-secondary no-lock" style="padding:6px 12px;font-size:12px;" onclick="event.stopPropagation();compartirReunion('${entry.id}')">🔗 Compartir</button>
           <span>${open?'▲':'▼'}</span>
@@ -2673,6 +3031,7 @@ function renderConfig(){
     <div class="admin-code" style="font-size:14px;">${escapeHtml(state.authUser ? state.authUser.email : '')}</div></div>
   </div>
   ${fieldsetApariencia()}
+  ${fieldsetInstalar()}
   <fieldset>
     <legend>Nombres para Preside / Dirige</legend>
     <p class="hint">Agrega aquí los nombres que suelen presidir o dirigir la reunión; aparecerán como lista desplegable en ambas agendas.</p>
