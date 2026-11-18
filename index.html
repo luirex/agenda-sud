@@ -634,7 +634,8 @@ function fieldsetInstalar(){
 function colProgramas(){ return collection(db,'barrios',state.barrioId,'programas'); }
 const PROG_TIPOS = {
   titulo:{n:'Título de sección', f:[['texto','Título de la sección','i']]},
-  bautismo:{n:'Ordenanza de bautismo', f:[['bautizado','¿Quién se bautiza?','p'],['bautiza','¿Quién bautiza?','p'],['testigo1','Testigo 1','p'],['testigo2','Testigo 2','p'],['confirmado','Confirmación: ¿quién se confirma?','p'],['confirma','Confirmación: ¿quién confirma?','p']]},
+  bautismo:{n:'Ordenanza de bautismo', f:[['bautizado','¿Quién se bautiza?','p'],['bautiza','¿Quién bautiza?','p'],['testigo1','Testigo 1','p'],['testigo2','Testigo 2','p']]},
+  confirmacion:{n:'Ordenanza de confirmación', f:[['confirmado','¿Quién se confirma?','p'],['confirma','¿Quién confirma?','p']]},
   oracion:{n:'Oración', f:[['rol','','r'],['nombre','Nombre','p']], d:{rol:'Oración'}},
   himno:{n:'Himno', f:[['rol','','r'],['num','Número o título del himno','h']], d:{rol:'Himno'}},
   discursante:{n:'Discursante', f:[['nombre','Nombre','p'],['tema','Tema','a','x'],['tiempo','Minutos','i','x']]},
@@ -649,13 +650,13 @@ const PROG_TIPOS = {
   sep:{n:'Línea separadora', f:[]}
 };
 const PROG_GRUPOS = [
-  ['Participantes',['bautismo','oracion','discursante','mensaje','testimonio','musical']],
+  ['Participantes',['bautismo','confirmacion','oracion','discursante','mensaje','testimonio','musical']],
   ['Música',['himno']],
   ['Contenido',['escritura','frase','actividad','nota']],
   ['Estructura',['titulo','depie','sep']]
 ];
 const PROG_PLANTILLAS = {
-  bautismo:{n:'Servicio bautismal', items:[['himno',{rol:'Himno inicial'}],['oracion',{rol:'Oración inicial'}],['mensaje',{rol:'Bienvenida'}],['discursante',{tiempo:'5'}],['musical',{}],['bautismo',{}],['testimonio',{}],['himno',{rol:'Himno final'}],['oracion',{rol:'Oración final'}]]},
+  bautismo:{n:'Servicio bautismal', items:[['himno',{rol:'Himno inicial'}],['oracion',{rol:'Oración inicial'}],['mensaje',{rol:'Bienvenida'}],['discursante',{tiempo:'5'}],['musical',{}],['bautismo',{}],['confirmacion',{}],['testimonio',{}],['himno',{rol:'Himno final'}],['oracion',{rol:'Oración final'}]]},
   primaria:{n:'Programa de Primaria', items:[['himno',{rol:'Himno inicial'}],['oracion',{rol:'Oración inicial'}],['mensaje',{rol:'Bienvenida'}],['titulo',{texto:'Participación de los niños'}],['actividad',{}],['escritura',{}],['actividad',{}],['frase',{}],['testimonio',{}],['mensaje',{rol:'Palabras de la presidencia de la Primaria'}],['himno',{rol:'Himno final'}],['oracion',{rol:'Oración final'}]]},
   jovenes:{n:'Jóvenes (Hombres / Mujeres Jóvenes)', items:[['himno',{rol:'Himno inicial'}],['oracion',{rol:'Oración inicial'}],['mensaje',{rol:'Bienvenida'}],['escritura',{}],['discursante',{}],['musical',{}],['actividad',{}],['testimonio',{}],['himno',{rol:'Himno final'}],['oracion',{rol:'Oración final'}]]},
   blanco:{n:'En blanco', items:[]}
@@ -978,7 +979,9 @@ function construirHtmlPrograma(p){
         filas.push(`<div class="print-row" style="margin-top:4px;"><b>Ordenanza del bautismo</b></div>`);
         filas.push(filaOracionImprimible('Se bautiza', v.bautizado)); filas.push(filaOracionImprimible('Bautiza', v.bautiza));
         filas.push(filaOracionImprimible('Testigo 1', v.testigo1)); filas.push(filaOracionImprimible('Testigo 2', v.testigo2));
-        filas.push(`<div class="print-row" style="margin-top:8px;"><b>Confirmación</b></div>`);
+        break;
+      case 'confirmacion':
+        filas.push(`<div class="print-row" style="margin-top:4px;"><b>Ordenanza de confirmación</b></div>`);
         filas.push(filaOracionImprimible('Se confirma', v.confirmado)); filas.push(filaOracionImprimible('Confirma', v.confirma)); break;
       case 'mensaje': filas.push(filaOracionImprimible(v.rol||'Mensaje', v.nombre)); filas.push(filaImprimible('Detalle', v.detalle)); break;
       case 'musical': filas.push(filaOracionImprimible('Número musical', v.nombre)); filas.push(filaImprimible('Obra', v.detalle)); break;
