@@ -245,6 +245,19 @@
   .grid2>div,.grid3>div{min-width:0;} .grid2 textarea,.grid3 textarea,.grid2 input,.grid3 input{width:100%;box-sizing:border-box;}
   .vista-oraciones{margin:4px 0 8px;} .vo-botones{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:10px;}
   .vista-comp .oracion-card{margin-top:6px;}
+  /* Líneas que acompañan al texto (una por renglón) */
+  .prog-doc .print-oracion .print-linea,.vista-comp .print-oracion .print-linea,#print-area .print-oracion .print-linea{
+    border-bottom:none !important;line-height:26px !important;min-height:26px !important;padding:0 3px !important;
+    background-image:repeating-linear-gradient(to bottom,transparent 0,transparent 25px,#8d8d8d 25px,#8d8d8d 26px) !important;
+    -webkit-print-color-adjust:exact;print-color-adjust:exact;
+    background-repeat:repeat-y;overflow-wrap:anywhere;}
+  .prog-doc .print-row.print-oracion,.vista-comp .print-row.print-oracion{line-height:26px;} .prog-doc .print-oracion .print-label,.vista-comp .print-oracion .print-label{line-height:26px;}
+  .foto-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:10px;margin-top:12px;}
+  .foto-th{position:relative;aspect-ratio:1;border-radius:10px;overflow:hidden;border:1px solid var(--line);background:var(--parchment-dark);}
+  .foto-th img{width:100%;height:100%;object-fit:cover;cursor:zoom-in;display:block;}
+  .foto-th button{position:absolute;top:5px;right:5px;width:26px;height:26px;border:none;border-radius:50%;background:rgba(0,0,0,.6);color:#fff;cursor:pointer;}
+  .foto-modal{position:fixed;inset:0;z-index:600;background:rgba(0,0,0,.88);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;padding:16px;cursor:zoom-out;}
+  .foto-modal img{max-width:96vw;max-height:84vh;border-radius:8px;} .foto-modal a{color:#F3E7C6;font-size:14px;} .foto-modal span{position:absolute;top:14px;right:20px;color:#fff;font-size:26px;}
   /* ---- Pantalla de ingreso premium ---- */
   body.modo-gate #spine{display:none;}
   body.modo-gate #page{background:radial-gradient(ellipse at 50% -10%, rgba(201,165,92,.28), transparent 55%),
@@ -621,6 +634,7 @@ function fieldsetInstalar(){
 function colProgramas(){ return collection(db,'barrios',state.barrioId,'programas'); }
 const PROG_TIPOS = {
   titulo:{n:'Título de sección', f:[['texto','Título de la sección','i']]},
+  bautismo:{n:'Ordenanza de bautismo', f:[['bautizado','¿Quién se bautiza?','p'],['bautiza','¿Quién bautiza?','p'],['testigo1','Testigo 1','p'],['testigo2','Testigo 2','p'],['confirmado','Confirmación: ¿quién se confirma?','p'],['confirma','Confirmación: ¿quién confirma?','p']]},
   oracion:{n:'Oración', f:[['rol','','r'],['nombre','Nombre','p']], d:{rol:'Oración'}},
   himno:{n:'Himno', f:[['rol','','r'],['num','Número o título del himno','h']], d:{rol:'Himno'}},
   discursante:{n:'Discursante', f:[['nombre','Nombre','p'],['tema','Tema','a','x'],['tiempo','Minutos','i','x']]},
@@ -635,13 +649,13 @@ const PROG_TIPOS = {
   sep:{n:'Línea separadora', f:[]}
 };
 const PROG_GRUPOS = [
-  ['Participantes',['oracion','discursante','mensaje','testimonio','musical']],
+  ['Participantes',['bautismo','oracion','discursante','mensaje','testimonio','musical']],
   ['Música',['himno']],
   ['Contenido',['escritura','frase','actividad','nota']],
   ['Estructura',['titulo','depie','sep']]
 ];
 const PROG_PLANTILLAS = {
-  bautismo:{n:'Servicio bautismal', items:[['himno',{rol:'Himno inicial'}],['oracion',{rol:'Oración inicial'}],['mensaje',{rol:'Bienvenida'}],['discursante',{tiempo:'5'}],['musical',{}],['mensaje',{rol:'Ordenanza del bautismo'}],['testimonio',{}],['himno',{rol:'Himno final'}],['oracion',{rol:'Oración final'}]]},
+  bautismo:{n:'Servicio bautismal', items:[['himno',{rol:'Himno inicial'}],['oracion',{rol:'Oración inicial'}],['mensaje',{rol:'Bienvenida'}],['discursante',{tiempo:'5'}],['musical',{}],['bautismo',{}],['testimonio',{}],['himno',{rol:'Himno final'}],['oracion',{rol:'Oración final'}]]},
   primaria:{n:'Programa de Primaria', items:[['himno',{rol:'Himno inicial'}],['oracion',{rol:'Oración inicial'}],['mensaje',{rol:'Bienvenida'}],['titulo',{texto:'Participación de los niños'}],['actividad',{}],['escritura',{}],['actividad',{}],['frase',{}],['testimonio',{}],['mensaje',{rol:'Palabras de la presidencia de la Primaria'}],['himno',{rol:'Himno final'}],['oracion',{rol:'Oración final'}]]},
   jovenes:{n:'Jóvenes (Hombres / Mujeres Jóvenes)', items:[['himno',{rol:'Himno inicial'}],['oracion',{rol:'Oración inicial'}],['mensaje',{rol:'Bienvenida'}],['escritura',{}],['discursante',{}],['musical',{}],['actividad',{}],['testimonio',{}],['himno',{rol:'Himno final'}],['oracion',{rol:'Oración final'}]]},
   blanco:{n:'En blanco', items:[]}
@@ -658,7 +672,10 @@ function compPayload(pr, completo){
 function guardarProgramaYa(){
   const pr = state.programas.find(x=>x.id===state.progId); if(!pr) return Promise.resolve();
   if(state.compMode){   // invitado con enlace de editor
-    return setDoc(doc(db,'programasCompartidos',state.compMode.token), compPayload(pr), {merge:true}).catch(onSaveError);
+    return setDoc(doc(db,'programasCompartidos',state.compMode.token), compPayload(pr), {merge:true}).catch(e=>{
+      onSaveError(e);
+      if(!state.compErrAviso){ state.compErrAviso=true; alert('No se pudieron guardar los cambios ('+(e.code||e.message||e)+').\n\nSi eres el dueño del programa: revisa que las reglas de Firestore incluyan el bloque programasCompartidos y que el enlace sea de tipo Editor. Si usas Brave, desactiva los Escudos para este sitio.'); }
+    });
   }
   const {id, ...resto} = pr;
   const tareas = [setDoc(doc(db,'barrios',state.barrioId,'programas',id), Object.assign({}, resto, {_writer:sessionId, actualizado:new Date().toISOString()}))];
@@ -666,7 +683,70 @@ function guardarProgramaYa(){
   return Promise.all(tareas).catch(onSaveError);
 }
 const guardarPrograma = debounce(()=>{ guardarProgramaYa(); }, 500);
+window.progEditar = function(){ state.progVista=false; render(); window.scrollTo(0,0); };
 window.progVer = async function(){ await guardarProgramaYa(); state.progVista=true; state.progPanel=false; render(); window.scrollTo(0,0); toast('Programa guardado'); };
+/* ---- Registro fotográfico (evidencia) ---- */
+function colFotos(pid){ return collection(db,'barrios',state.barrioId,'programas',pid,'fotos'); }
+async function cargarFotos(pid){
+  if(state.compMode || state.progFotos[pid]!==undefined) return;
+  state.progFotos[pid] = null;
+  try{ const snap = await getDocs(colFotos(pid)); const arr=[]; snap.forEach(d=>arr.push(Object.assign({id:d.id}, d.data())));
+    arr.sort((a,b)=>(a.creadoEn||'').localeCompare(b.creadoEn||'')); state.progFotos[pid]=arr; }
+  catch(e){ console.error('[Fotos]', e); state.progFotos[pid]=[]; }
+  if(state.stage==='app' && state.view==='programas' && state.progId===pid) renderSiNoEscribiendo();
+}
+function comprimirImagen(file){
+  return new Promise((ok,fallo)=>{
+    const url = URL.createObjectURL(file), img = new Image();
+    img.onload = ()=>{
+      const max = 1400, k = Math.min(1, max/Math.max(img.width,img.height));
+      const c = document.createElement('canvas'); c.width = Math.round(img.width*k); c.height = Math.round(img.height*k);
+      c.getContext('2d').drawImage(img,0,0,c.width,c.height); URL.revokeObjectURL(url);
+      let q=.72, d=c.toDataURL('image/jpeg',q); while(d.length>900000 && q>.3){ q-=.1; d=c.toDataURL('image/jpeg',q); }
+      d.length>980000 ? fallo(new Error('Imagen demasiado grande')) : ok(d);
+    };
+    img.onerror = ()=>{ URL.revokeObjectURL(url); fallo(new Error('No se pudo leer la imagen')); };
+    img.src = url;
+  });
+}
+window.progFotosAgregar = async function(input){
+  const pr = progActual(); const files = [...(input.files||[])]; input.value=''; if(!pr||!files.length) return;
+  await cargarFotos(pr.id); const lista = state.progFotos[pr.id] || (state.progFotos[pr.id]=[]);
+  let n=0;
+  for(const f of files){
+    try{
+      toast(`Subiendo foto ${n+1} de ${files.length}…`);
+      const dataUrl = await comprimirImagen(f);
+      const reg = {nombre:f.name||'foto', dataUrl, creadoEn:new Date().toISOString()};
+      const ref = await addDoc(colFotos(pr.id), reg); lista.push(Object.assign({id:ref.id}, reg)); n++;
+    }catch(e){ alert('No se pudo guardar "'+(f.name||'foto')+'": '+(e.message||e)); }
+  }
+  render(); if(n) toast(n+' foto(s) guardada(s)');
+};
+window.progFotoQuitar = async function(fid){
+  const pr = progActual(); if(!pr||!confirm('¿Eliminar esta foto?')) return;
+  try{ await deleteDoc(doc(colFotos(pr.id), fid)); state.progFotos[pr.id]=(state.progFotos[pr.id]||[]).filter(f=>f.id!==fid); render(); }
+  catch(e){ alert('No se pudo eliminar: '+(e.message||e)); }
+};
+window.progFotoVer = function(fid){
+  const pr = progActual(); const f = ((pr&&state.progFotos[pr.id])||[]).find(x=>x.id===fid); if(!f) return;
+  const o = document.createElement('div'); o.className='foto-modal'; o.onclick=()=>o.remove();
+  o.innerHTML = `<img src="${f.dataUrl}" alt=""><a href="${f.dataUrl}" download="${escapeAttr((f.nombre||'foto').replace(/\.[^.]+$/,''))}.jpg" onclick="event.stopPropagation()">Descargar</a><span>✕</span>`;
+  document.body.appendChild(o);
+};
+function progFotosHtml(p){
+  if(state.compMode) return '';
+  cargarFotos(p.id);
+  const fotos = state.progFotos[p.id];
+  return `<fieldset style="margin-top:18px;"><legend>Registro fotográfico</legend>
+    <p class="hint">Agrega una o varias fotos como evidencia del programa. Se guardan en este programa y no salen en el PDF ni en los enlaces compartidos.</p>
+    <input type="file" id="prog-fotos-input" accept="image/*" multiple style="display:none" onchange="progFotosAgregar(this)">
+    <button type="button" class="btn-primary" onclick="document.getElementById('prog-fotos-input').click()">＋ Agregar fotos</button>
+    ${fotos===null||fotos===undefined ? '<p class="hint">Cargando fotos…</p>'
+      : fotos.length ? `<div class="foto-grid">${fotos.map(f=>`<div class="foto-th"><img src="${f.dataUrl}" alt="" loading="lazy" onclick="progFotoVer('${f.id}')"><button type="button" title="Eliminar" onclick="progFotoQuitar('${f.id}')">✕</button></div>`).join('')}</div>`
+      : '<p class="hint" style="margin-top:10px;">Aún no hay fotos.</p>'}
+  </fieldset>`;
+}
 function progActual(){ return state.programas.find(x=>x.id===state.progId); }
 
 function urlProg(token){ return location.origin + location.pathname + '?p=' + token; }
@@ -747,6 +827,7 @@ window.progPanelToggle = ()=>{ state.progPanel=!state.progPanel; const e=qs('pro
 window.progEliminar = async function(id){
   if(!confirm('¿Eliminar este programa? No se puede deshacer.')) return;
   const _pe = state.programas.find(x=>x.id===id); if(_pe && _pe.compToken){ try{ await deleteDoc(doc(db,'programasCompartidos',_pe.compToken)); }catch(e){} }
+  try{ const fs = await getDocs(colFotos(id)); for(const d of fs.docs){ await deleteDoc(d.ref); } }catch(e){ console.warn(e); }
   try{ await deleteDoc(doc(db,'barrios',state.barrioId,'programas',id)); state.programas=state.programas.filter(x=>x.id!==id); if(state.progId===id){ state.progId=null; state.progVista=false; } render(); toast('Programa eliminado'); }
   catch(e){ alert('No se pudo eliminar: '+(e.message||e)); }
 };
@@ -856,7 +937,7 @@ function renderEditorPrograma(p){
       <button type="button" class="btn-secondary" onclick="progEliminar('${p.id}')">Eliminar</button></div>${progCompPanelHtml(p)}`;
   if(state.progVista){
     return acciones(`<button type="button" class="btn-primary" onclick="progEditar()">Editar</button>`)+
-      `<div class="vista-comp">${construirHtmlPrograma(p).replace('class="print-page prog-doc"','class="prog-doc"')}</div>`;
+      `<div class="vista-comp">${construirHtmlPrograma(p).replace('class="print-page prog-doc"','class="prog-doc"')}</div>`+progFotosHtml(p);
   }
   return acciones(`<button type="button" class="btn-primary" onclick="progVer()">Guardar y ver</button>`)+`
     <div class="prog-layout"><div>
@@ -867,6 +948,7 @@ function renderEditorPrograma(p){
           <div><label>Lugar</label><textarea rows="1" class="auto-grow" placeholder="Capilla, salón…" onkeydown="${PROG_ENTER}" oninput="autoGrow(this);progCampoGeneral('lugar',this.value)">${escapeHtml(p.lugar||'')}</textarea></div></div>
       </fieldset>
       ${p.items.length ? p.items.map((it,i)=>progItemHtml(it,i,p.items.length)).join('') : `<div class="prog-vacio">Programa vacío. Elige elementos en la barra de la derecha.</div>`}
+      ${progFotosHtml(p)}
     </div>${side}</div>
     <button type="button" class="prog-fab" onclick="progPanelToggle()">＋ Agregar</button>`;
 }
@@ -892,6 +974,12 @@ function construirHtmlPrograma(p){
       case 'discursante': filas.push(filaOracionImprimible('Discursante', v.nombre));
         if(v.tema) filas.push(filaImprimible('Tema', v.tema + (v.tiempo?` (${v.tiempo} min)`:'')));
         else if(v.tiempo) filas.push(filaImprimible('Tiempo', v.tiempo+' min')); break;
+      case 'bautismo':
+        filas.push(`<div class="print-row" style="margin-top:4px;"><b>Ordenanza del bautismo</b></div>`);
+        filas.push(filaOracionImprimible('Se bautiza', v.bautizado)); filas.push(filaOracionImprimible('Bautiza', v.bautiza));
+        filas.push(filaOracionImprimible('Testigo 1', v.testigo1)); filas.push(filaOracionImprimible('Testigo 2', v.testigo2));
+        filas.push(`<div class="print-row" style="margin-top:8px;"><b>Confirmación</b></div>`);
+        filas.push(filaOracionImprimible('Se confirma', v.confirmado)); filas.push(filaOracionImprimible('Confirma', v.confirma)); break;
       case 'mensaje': filas.push(filaOracionImprimible(v.rol||'Mensaje', v.nombre)); filas.push(filaImprimible('Detalle', v.detalle)); break;
       case 'musical': filas.push(filaOracionImprimible('Número musical', v.nombre)); filas.push(filaImprimible('Obra', v.detalle)); break;
       case 'testimonio': filas.push(filaOracionImprimible('Testimonio', v.nombre)); break;
@@ -1000,7 +1088,7 @@ const state = {
   log:[], registry:{},
   anunciosGenerales:[],
   anunciosBarrio:{items:[]},
-  verLogId:null, verAgenda:null, progCompOpen:false, compSubs:{}, compSubsBarrio:null, compMode:null, compError:'', programas:[], progId:null, progPanel:false, progVista:false,
+  progFotos:{}, verLogId:null, verAgenda:null, progCompOpen:false, compSubs:{}, compSubsBarrio:null, compMode:null, compError:'', programas:[], progId:null, progPanel:false, progVista:false,
   oracionesSacramentales:{pan:'', agua:''},
   catalogoHimnos:{himnarioSUD:[], nuevaColeccion:[]},
   familiasData:{list:[], resetBoundary:null},
@@ -1196,7 +1284,8 @@ function cargarProgramaCompartido(token){
     const x = snap.data(); const antes = state.compMode.acceso;
     state.compMode.acceso = x.acceso; state.barrioNombre = x.barrioNombre||'';
     const loc = state.programas[0];
-    if(!(x._writer===sessionId && loc)) state.programas = [Object.assign({}, x, {id:'comp'})];
+    if(x._writer===sessionId && loc && antes!==null){ return; }   // eco de mi propio guardado: no tocar la pantalla
+    state.programas = [Object.assign({}, x, {id:'comp'})];
     state.progId='comp';
     if(x.acceso==='lector') state.progVista=true; else if(antes===null || antes==='lector') state.progVista=false;
     if(x.acceso==='lector' || !usuarioEstaEscribiendo()) render();
@@ -2088,7 +2177,7 @@ function renderNav(){
   if(state.isAdmin) extra = `<button type="button" class="tab" onclick="state.stage='admin';render();">🛠 Panel admin</button>` + extra;
   qs('spine').innerHTML = `<div class="brand"><div class="crest">${CREST_SVG}</div><h1>Agenda Dominical</h1><p>${escapeHtml(state.barrioNombre)||'Agenda dominical del barrio'}</p></div>${spine}
     <div style="margin-top:auto;">${extra}</div>
-    <div class="footer-note">"La reverencia invita a la revelación."<br>— Élder Boyd K. Packer<br><span style="opacity:.6">Versión 14-nov (programas)</span></div>`;
+    <div class="footer-note">"La reverencia invita a la revelación."<br>— Élder Boyd K. Packer<br><span style="opacity:.6">Versión 17-nov (programas)</span></div>`;
   qs('topbar').innerHTML = spine + extra;
 }
 
